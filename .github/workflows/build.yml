@@ -127,16 +127,21 @@ jobs:
       # ========== make_trollhelper_package ==========
       - name: Build TrollHelper (package mode)
         run: |
+          mkdir -p _build
           cp RootHelper/.theos/obj/trollstorehelper TrollHelper/Resources/trollstorehelper
+          # 1. rootful deb (arm64)
           make -C TrollHelper FINALPACKAGE=1 clean package
+          cp TrollHelper/.theos/obj/*.package/*.deb _build/ 2>/dev/null || true
+          echo "=== rootful deb saved ==="
+          ls -lh _build/*.deb 2>/dev/null || echo "no deb found"
+          # 2. rootless deb (arm64)
           make -C TrollHelper FINALPACKAGE=1 clean
           make -C TrollHelper THEOS_PACKAGE_SCHEME=rootless FINALPACKAGE=1 package
+          cp TrollHelper/.theos/obj/rootless/*.package/*.deb _build/ 2>/dev/null || true
+          echo "=== rootless deb saved ==="
+          ls -lh _build/*.deb 2>/dev/null || echo "no deb found"
           rm TrollHelper/Resources/trollstorehelper
           echo "TrollHelper package 编译完成"
-          echo "=== rootful deb ==="
-          find TrollHelper/.theos/obj -name "*.deb" 2>/dev/null
-          echo "=== rootless deb ==="
-          find TrollHelper/.theos/obj -name "*.deb" -path "*/rootless/*" 2>/dev/null
 
       # ========== make_trollhelper_embedded ==========
       - name: Build PersistenceHelper (3 variants)
@@ -244,8 +249,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: TrollHelper-debs
-          path: |
-            TrollHelper/.theos/obj/**/TrollHelper.package/*.deb
+          path: _build/*.deb
           retention-days: 7
 
       # ========== 发布到 GitHub Release ==========
@@ -269,7 +273,7 @@ jobs:
             _build/TrollStore.tar
             _build/TrollHelper_iOS15.ipa
             _build/TrollHelper_arm64e.ipa
+            _build/*.deb
             ldid
-            TrollHelper/.theos/obj/**/TrollHelper.package/*.deb
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
