@@ -133,6 +133,10 @@ jobs:
           make -C TrollHelper THEOS_PACKAGE_SCHEME=rootless FINALPACKAGE=1 package
           rm TrollHelper/Resources/trollstorehelper
           echo "TrollHelper package 编译完成"
+          echo "=== rootful deb ==="
+          find TrollHelper/.theos/obj -name "*.deb" 2>/dev/null
+          echo "=== rootless deb ==="
+          find TrollHelper/.theos/obj -name "*.deb" -path "*/rootless/*" 2>/dev/null
 
       # ========== make_trollhelper_embedded ==========
       - name: Build PersistenceHelper (3 variants)
@@ -236,6 +240,14 @@ jobs:
             _build/PersistenceHelper_Embedded_Legacy_arm64e
           retention-days: 7
 
+      - name: Upload deb packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: TrollHelper-debs
+          path: |
+            TrollHelper/.theos/obj/**/TrollHelper.package/*.deb
+          retention-days: 7
+
       # ========== 发布到 GitHub Release ==========
       - name: Create Release and Upload
         uses: softprops/action-gh-release@v2
@@ -252,10 +264,12 @@ jobs:
             - `TrollStore.tar` — 持久性助手安装包（通过 CF 代理下载）
             - `TrollHelper_iOS15.ipa` — TrollHelperOTA (arm64, iOS 15 兼容)
             - `TrollHelper_arm64e.ipa` — TrollHelperOTA (arm64e)
+            - `*.deb` — 越狱插件包（Dopamine/无根越狱安装用）
           files: |
             _build/TrollStore.tar
             _build/TrollHelper_iOS15.ipa
             _build/TrollHelper_arm64e.ipa
             ldid
+            TrollHelper/.theos/obj/**/TrollHelper.package/*.deb
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
