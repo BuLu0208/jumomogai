@@ -131,25 +131,15 @@ jobs:
           cp RootHelper/.theos/obj/trollstorehelper TrollHelper/Resources/trollstorehelper
           # 1. rootful deb (arm64)
           make -C TrollHelper FINALPACKAGE=1 clean package
-          DEB_FILE=$(find TrollHelper/.theos/obj -name "*.deb" ! -path "*/rootless/*" 2>/dev/null | head -1)
-          if [ -n "$DEB_FILE" ]; then
-            cp "$DEB_FILE" _build/
-            echo "Saved rootful deb: $(basename $DEB_FILE)"
-          else
-            echo "WARNING: rootful deb not found!"
-            find TrollHelper/.theos/obj -type f 2>/dev/null
-          fi
+          cp TrollHelper/packages/*.deb _build/ 2>/dev/null
+          echo "=== rootful deb ==="
+          ls -lh TrollHelper/packages/*.deb 2>/dev/null || echo "none"
           # 2. rootless deb (arm64)
           make -C TrollHelper FINALPACKAGE=1 clean
           make -C TrollHelper THEOS_PACKAGE_SCHEME=rootless FINALPACKAGE=1 package
-          DEB_FILE=$(find TrollHelper/.theos/obj -name "*.deb" -path "*/rootless/*" 2>/dev/null | head -1)
-          if [ -n "$DEB_FILE" ]; then
-            cp "$DEB_FILE" _build/
-            echo "Saved rootless deb: $(basename $DEB_FILE)"
-          else
-            echo "WARNING: rootless deb not found!"
-            find TrollHelper/.theos/obj -type f 2>/dev/null
-          fi
+          cp TrollHelper/packages/*.deb _build/ 2>/dev/null
+          echo "=== rootless deb ==="
+          ls -lh TrollHelper/packages/*.deb 2>/dev/null || echo "none"
           rm TrollHelper/Resources/trollstorehelper
           echo "=== all debs in _build ==="
           ls -lh _build/*.deb 2>/dev/null || echo "none"
