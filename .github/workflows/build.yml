@@ -152,7 +152,7 @@ jobs:
       - name: Assemble TrollStore.tar
         run: |
           cp RootHelper/.theos/obj/trollstorehelper TrollStore/.theos/obj/TrollStore.app/trollstorehelper
-          cp TrollHelper/.theos/obj/TrollStorePersistenceHelper.app/TrollStorePersistenceHelper TrollStore/.theos/obj/TrollStore.app/PersistenceHelper
+          cp _build/PersistenceHelper_Embedded TrollStore/.theos/obj/TrollStore.app/PersistenceHelper
           export COPYFILE_DISABLE=1
           tar -czvf _build/TrollStore.tar -C TrollStore/.theos/obj TrollStore.app
           echo "TrollStore.tar 打包完成"
