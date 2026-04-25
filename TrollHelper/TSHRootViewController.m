@@ -5,14 +5,10 @@
 // ========== 卡密验证系统 ==========
 #define KAMI_API_URL @"https://kami.lengye.top"
 #define KAMI_APPKEY @"9VRZ0ATE1YKM"
-#define KAMI_SAVED_CARD @"kami_saved_card"
-#define KAMI_SAVED_EXPIRES @"kami_saved_expires"
-#define KAMI_SAVED_TYPE @"kami_saved_type"
+#define KAMI_ACTIVATED @"kami_activated"
 
 @interface TSHRootViewController ()
 @property (nonatomic) BOOL cardVerified;
-@property (nonatomic, copy) NSString* cardExpiresAt;
-@property (nonatomic, copy) NSString* cardType;
 @property (nonatomic, copy) NSString* cardNotice;
 @property (nonatomic) BOOL configLoaded;
 @end
@@ -29,28 +25,16 @@
 	return [[UIDevice currentDevice] identifierForVendor].UUIDString;
 }
 
-- (NSString*)savedCard
+- (BOOL)isActivated
 {
-	return [[NSUserDefaults standardUserDefaults] stringForKey:KAMI_SAVED_CARD];
+	return [[NSUserDefaults standardUserDefaults] boolForKey:KAMI_ACTIVATED];
 }
 
-- (void)saveCard:(NSString*)card expires:(NSString*)expires type:(NSString*)type
+- (void)markActivated
 {
-	NSUserDefaults* defaults = [NSUserDefaults standardUserDefaults];
-	[defaults setObject:card forKey:KAMI_SAVED_CARD];
-	[defaults setObject:expires forKey:KAMI_SAVED_EXPIRES];
-	[defaults setObject:type forKey:KAMI_SAVED_TYPE];
-}
-
-- (void)clearCard
-{
-	NSUserDefaults* defaults = [NSUserDefaults standardUserDefaults];
-	[defaults removeObjectForKey:KAMI_SAVED_CARD];
-	[defaults removeObjectForKey:KAMI_SAVED_EXPIRES];
-	[defaults removeObjectForKey:KAMI_SAVED_TYPE];
-	_cardVerified = NO;
-	_cardExpiresAt = nil;
-	_cardType = nil;
+	[[NSUserDefaults standardUserDefaults] setBool:YES forKey:KAMI_ACTIVATED];
+	_cardVerified = YES;
+	_specifiers = nil;
 	[self reloadSpecifiers];
 }
 
@@ -109,10 +93,7 @@
 			NSString* msg = json[@"msg"];
 			if (code == 0)
 			{
-				_cardVerified = YES;
-				_cardExpiresAt = json[@"data"][@"expires_at"];
-				_cardType = json[@"data"][@"card_type"];
-				[self saveCard:card expires:_cardExpiresAt type:_cardType];
+				[self markActivated];
 				if (completion) completion(YES, nil);
 			}
 			else if (code == 1001)
@@ -182,8 +163,6 @@
 
 	[alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
 		textField.placeholder = @"请输入卡密";
-		NSString* saved = [self savedCard];
-		if (saved) textField.text = saved;
 		textField.keyboardType = UIKeyboardTypeDefault;
 		textField.autocapitalizationType = UITextAutocapitalizationTypeNone;
 		textField.autocorrectionType = UITextAutocorrectionTypeNo;
@@ -200,11 +179,6 @@
 					message:message preferredStyle:UIAlertControllerStyleAlert];
 				[errAlert addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:nil]];
 				[TSPresentationDelegate presentViewController:errAlert animated:YES completion:nil];
-			}
-			else
-			{
-				_specifiers = nil;
-				[self reloadSpecifiers];
 			}
 		}];
 	}];
@@ -229,20 +203,9 @@
 
 	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(reloadSpecifiers) name:UIApplicationWillEnterForegroundNotification object:nil];
 
-	// 加载卡密配置和自动验证
-	_cardVerified = NO;
+	// 加载卡密配置和公告
+	_cardVerified = [self isActivated];
 	[self fetchConfig];
-
-	NSString* savedCard = [self savedCard];
-	if (savedCard.length > 0)
-	{
-		[self verifyCard:savedCard completion:^(BOOL success, NSString* message) {
-			if (!success)
-			{
-				NSLog(@"Kami auto-verify failed: %@", message);
-			}
-		}];
-	}
 
 	fetchLatestTrollStoreVersion(^(NSString* latestVersion)
 	{
