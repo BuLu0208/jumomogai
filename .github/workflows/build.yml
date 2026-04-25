@@ -1,0 +1,232 @@
+name: Build TrollStore
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
+      # ========== 缓存：Homebrew 依赖 ==========
+      - name: Cache Homebrew
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/Homebrew
+          key: brew-deps-v3-${{ hashFiles('.github/workflows/build.yml') }}
+          restore-keys: brew-deps-v3-
+
+      # ========== 缓存：Theos + iOS SDK ==========
+      - name: Cache Theos
+        uses: actions/cache@v4
+        with:
+          path: ~/theos
+          key: theos-v3-${{ hashFiles('.github/workflows/build.yml') }}
+
+      # ========== 缓存：fastPathSign 编译产物 ==========
+      - name: Cache fastPathSign
+        uses: actions/cache@v4
+        with:
+          path: ./Exploits/fastPathSign/fastPathSign
+          key: fps-v2-${{ hashFiles('Exploits/fastPathSign/Makefile', 'ChOma/Makefile') }}
+
+      # ========== 安装 Homebrew 依赖 ==========
+      - name: Install dependencies
+        run: |
+          brew install openssl@3 ldid libarchive pkg-config || true
+
+      # ========== 安装 Theos + iOS SDK ==========
+      - name: Setup Theos
+        run: |
+          export THEOS=~/theos
+          if [ ! -d "$THEOS/bin" ]; then
+            echo "Cloning Theos..."
+            git clone --recursive https://github.com/theos/theos.git "$THEOS"
+            curl -sL "https://github.com/theos/sdks/archive/master.zip" -o /tmp/sdks.zip
+            unzip -qo /tmp/sdks.zip -d /tmp
+            mkdir -p "$THEOS/sdks"
+            cp /tmp/sdks-master/*.sdk "$THEOS/sdks/" 2>/dev/null || true
+            rm -rf /tmp/sdks-master /tmp/sdks.zip
+            if [ ! -d "$THEOS/sdks/iPhoneOS16.5.sdk" ]; then
+              XCODE_SDK=$(xcrun --sdk iphoneos --show-sdk-path 2>/dev/null)
+              if [ -n "$XCODE_SDK" ] && [ -d "$XCODE_SDK" ]; then
+                ln -sf "$XCODE_SDK" "$THEOS/sdks/iPhoneOS16.5.sdk"
+                echo "Symlinked SDK: $(basename $XCODE_SDK)"
+              fi
+            fi
+            echo "Theos 安装完成"
+            ls "$THEOS/sdks/"
+          else
+            echo "Theos 已缓存，跳过安装"
+          fi
+          echo "THEOS=$THEOS" >> $GITHUB_ENV
+          echo "PATH=$THEOS/bin:$PATH" >> $GITHUB_ENV
+
+      # ========== 编译 fastPathSign（依赖 ChOma） ==========
+      - name: Build fastPathSign
+        run: |
+          if [ ! -f "./Exploits/fastPathSign/fastPathSign" ]; then
+            echo "编译 fastPathSign..."
+            make -C Exploits/fastPathSign
+            echo "fastPathSign 编译完成"
+            ls -lh Exploits/fastPathSign/fastPathSign
+          else
+            echo "fastPathSign 已缓存，跳过编译"
+          fi
+
+      # ========== 生成 Victim 证书 ==========
+      - name: Generate victim certificate
+        run: |
+          cd Victim
+          chmod +x make_cert.sh
+          mkdir -p /tmp/ipa_check
+          unzip -q InstallerVictim.ipa -d /tmp/ipa_check
+          APP_DIR=$(find /tmp/ipa_check/Payload -maxdepth 1 -type d -mindepth 1 | head -1)
+          BINARY_NAME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$APP_DIR/Info.plist")
+          TEAM_ID=$(codesign -dvv "$APP_DIR/$BINARY_NAME" 2>&1 | grep "TeamIdentifier" | awk '{print $NF}')
+          echo "Victim Team ID: $TEAM_ID"
+          export PATH="$(brew --prefix openssl@3)/bin:$PATH"
+          ./make_cert.sh "$TEAM_ID"
+          echo "证书生成完成"
+          ls -lh victim.p12
+
+      # ========== make_roothelper ==========
+      - name: Build RootHelper (trollstorehelper)
+        run: |
+          echo "=== 编译 RootHelper ==="
+          make -C RootHelper DEBUG=0
+          echo "RootHelper 编译完成"
+          ls -lh RootHelper/.theos/obj/trollstorehelper
+
+      # ========== make_trollstore ==========
+      - name: Build TrollStore.app
+        run: |
+          echo "=== 编译 TrollStore.app ==="
+          make -C TrollStore FINALPACKAGE=1
+          echo "TrollStore.app 编译完成"
+          ls TrollStore/.theos/obj/TrollStore.app/
+
+      # ========== make_trollhelper_package ==========
+      - name: Build TrollHelper (package mode)
+        run: |
+          echo "=== 编译 TrollHelper (package mode) ==="
+          cp RootHelper/.theos/obj/trollstorehelper TrollHelper/Resources/trollstorehelper
+          make -C TrollHelper FINALPACKAGE=1 clean package
+          make -C TrollHelper FINALPACKAGE=1 clean
+          make -C TrollHelper THEOS_PACKAGE_SCHEME=rootless FINALPACKAGE=1 package
+          rm TrollHelper/Resources/trollstorehelper
+          echo "TrollHelper package 编译完成"
+
+      # ========== make_trollhelper_embedded ==========
+      - name: Build PersistenceHelper (3 variants)
+        run: |
+          echo "=== 编译 PersistenceHelper Embedded ==="
+          mkdir -p _build
+          # 1. 标准 arm64
+          make -C TrollHelper clean
+          make -C TrollHelper FINALPACKAGE=1 EMBEDDED_ROOT_HELPER=1
+          cp TrollHelper/.theos/obj/TrollStorePersistenceHelper.app/TrollStorePersistenceHelper _build/PersistenceHelper_Embedded
+          # 2. Legacy arm64 (iOS 15)
+          make -C TrollHelper clean
+          make -C TrollHelper FINALPACKAGE=1 EMBEDDED_ROOT_HELPER=1 LEGACY_CT_BUG=1
+          cp TrollHelper/.theos/obj/TrollStorePersistenceHelper.app/TrollStorePersistenceHelper _build/PersistenceHelper_Embedded_Legacy_arm64
+          # 3. Legacy arm64e
+          make -C TrollHelper clean
+          make -C TrollHelper FINALPACKAGE=1 EMBEDDED_ROOT_HELPER=1 CUSTOM_ARCHS=arm64e
+          cp TrollHelper/.theos/obj/TrollStorePersistenceHelper.app/TrollStorePersistenceHelper _build/PersistenceHelper_Embedded_Legacy_arm64e
+          make -C TrollHelper clean
+          echo "所有 PersistenceHelper 编译完成"
+          ls -lh _build/PersistenceHelper_*
+
+      # ========== assemble_trollstore ==========
+      - name: Assemble TrollStore.tar
+        run: |
+          echo "=== 打包 TrollStore.tar ==="
+          cp RootHelper/.theos/obj/trollstorehelper TrollStore/.theos/obj/TrollStore.app/trollstorehelper
+          cp TrollHelper/.theos/obj/TrollStorePersistenceHelper.app/TrollStorePersistenceHelper TrollStore/.theos/obj/TrollStore.app/PersistenceHelper
+          export COPYFILE_DISABLE=1
+          tar -czvf _build/TrollStore.tar -C TrollStore/.theos/obj TrollStore.app
+          echo "TrollStore.tar 打包完成"
+          ls -lh _build/TrollStore.tar
+
+      # ========== 编译 Pwnify ==========
+      - name: Build Pwnify
+        run: |
+          echo "=== 编译 Pwnify ==="
+          make -C Pwnify
+          echo "Pwnify 编译完成"
+          ls -lh Pwnify/pwnify
+
+      # ========== build_installer15 ==========
+      - name: Build TrollHelperOTA iOS15 (arm64)
+        run: |
+          echo "=== 构建 TrollHelperOTA iOS15 (arm64) ==="
+          mkdir -p _build/tmp15
+          unzip Victim/InstallerVictim.ipa -d _build/tmp15
+          cp _build/PersistenceHelper_Embedded_Legacy_arm64 _build/TrollStorePersistenceHelperToInject
+          ./Pwnify/pwnify set-cpusubtype _build/TrollStorePersistenceHelperToInject 1
+          ldid -s -KVictim/victim.p12 _build/TrollStorePersistenceHelperToInject
+          cd _build/tmp15
+          APP_PATH=$(find Payload -name "*" -depth 1)
+          APP_NAME=$(basename "$APP_PATH")
+          BINARY_NAME=$(echo "$APP_NAME" | cut -f 1 -d '.')
+          echo "Inject into: $APP_NAME/$BINARY_NAME"
+          cd ../..
+          ./Pwnify/pwnify pwn "_build/tmp15/Payload/$APP_NAME/$BINARY_NAME" _build/TrollStorePersistenceHelperToInject
+          cd _build/tmp15 && zip -vrD ../../_build/TrollHelper_iOS15.ipa * && cd ../..
+          rm _build/TrollStorePersistenceHelperToInject
+          rm -rf _build/tmp15
+          echo "TrollHelper_iOS15.ipa 完成"
+          ls -lh _build/TrollHelper_iOS15.ipa
+
+      # ========== build_installer64e ==========
+      - name: Build TrollHelperOTA arm64e
+        run: |
+          echo "=== 构建 TrollHelperOTA arm64e ==="
+          mkdir -p _build/tmp64e
+          unzip Victim/InstallerVictim.ipa -d _build/tmp64e
+          cd _build/tmp64e
+          APP_PATH=$(find Payload -name "*" -depth 1)
+          APP_NAME=$(basename "$APP_PATH")
+          BINARY_NAME=$(echo "$APP_NAME" | cut -f 1 -d '.')
+          echo "Inject into: $APP_NAME/$BINARY_NAME"
+          cd ../..
+          ./Pwnify/pwnify pwn64e "_build/tmp64e/Payload/$APP_NAME/$BINARY_NAME" _build/PersistenceHelper_Embedded_Legacy_arm64e
+          cd _build/tmp64e && zip -vrD ../../_build/TrollHelper_arm64e.ipa * && cd ../..
+          rm -rf _build/tmp64e
+          echo "TrollHelper_arm64e.ipa 完成"
+          ls -lh _build/TrollHelper_arm64e.ipa
+
+      # ========== 上传产物 ==========
+      - name: Upload TrollStore.tar
+        uses: actions/upload-artifact@v4
+        with:
+          name: TrollStore-tar
+          path: _build/TrollStore.tar
+          retention-days: 7
+
+      - name: Upload TrollHelperOTA IPAs
+        uses: actions/upload-artifact@v4
+        with:
+          name: TrollHelperOTA-IPAs
+          path: |
+            _build/TrollHelper_iOS15.ipa
+            _build/TrollHelper_arm64e.ipa
+          retention-days: 7
+
+      - name: Upload PersistenceHelper binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: PersistenceHelper-binaries
+          path: |
+            _build/PersistenceHelper_Embedded
+            _build/PersistenceHelper_Embedded_Legacy_arm64
+            _build/PersistenceHelper_Embedded_Legacy_arm64e
+          retention-days: 7
