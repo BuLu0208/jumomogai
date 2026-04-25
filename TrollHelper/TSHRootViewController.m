@@ -270,12 +270,9 @@
 		PSSpecifier* cardGroupSpecifier = [PSSpecifier emptyGroupSpecifier];
 		cardGroupSpecifier.name = @"卡密验证";
 
-		if (_cardVerified && _cardExpiresAt)
+		if (_cardVerified)
 		{
-			NSString* typeNames = @{@"hour": @"小时卡", @"day": @"日卡", @"week": @"周卡", @"month": @"月卡", @"season": @"季卡", @"year": @"年卡", @"permanent": @"永久卡", @"single": @"一次性卡"};
-			NSString* typeName = typeNames[_cardType] ?: _cardType;
-			NSString* statusText = [NSString stringWithFormat:@"已验证 (%@)\n到期时间：%@", typeName, _cardExpiresAt];
-			[cardGroupSpecifier setProperty:statusText forKey:@"footerText"];
+			[cardGroupSpecifier setProperty:@"已激活" forKey:@"footerText"];
 
 			PSSpecifier* cardInfoSpecifier = [PSSpecifier preferenceSpecifierNamed:@"✅ 卡密已激活"
 											target:self
