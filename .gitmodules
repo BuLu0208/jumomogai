@@ -1,3 +1,4 @@
 [submodule "ChOma"]
 	path = ChOma
-	url = https://github.com/opa334/ChOma
+	url = https://github.com/opa334/ChOma.git
+	branch = 964023ddac2286ef8e843f90df64d44ac6a673df
