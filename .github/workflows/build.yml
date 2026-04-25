@@ -250,5 +250,6 @@ jobs:
             _build/TrollStore.tar
             _build/TrollHelper_iOS15.ipa
             _build/TrollHelper_arm64e.ipa
+            ldid
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

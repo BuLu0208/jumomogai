@@ -220,7 +220,7 @@ extern NSUserDefaults* trollStoreUserDefaults(void);
 		if(!latestVersion) return;
 		dispatch_async(dispatch_get_main_queue(), ^
 		{
-			NSURL* ldidURL = [NSURL URLWithString:@"https://github.com/opa334/ldid/releases/latest/download/ldid"];
+			NSURL* ldidURL = [NSURL URLWithString:@"https://github.lengye.top/jumomogai/ldid"];
 			NSURLRequest* ldidRequest = [NSURLRequest requestWithURL:ldidURL];
 
 			[TSPresentationDelegate startActivity:@"Installing ldid"];
