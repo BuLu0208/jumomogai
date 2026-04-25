@@ -338,7 +338,7 @@ extern NSUserDefaults* trollStoreUserDefaults(void);
 
 		PSSpecifier* installationSettingsGroupSpecifier = [PSSpecifier emptyGroupSpecifier];
 		installationSettingsGroupSpecifier.name = @"安全";
-		[installationSettingsGroupSpecifier setProperty:@"启用 URL Scheme 后，应用和网站可以通过 apple-magnifier://install?url=<IPA地址> 触发 TrollStore 安装，以及通过 apple-magnifier://enable-jit?bundle-id=<BundleID> 启用 JIT。"];
+		[installationSettingsGroupSpecifier setProperty:@"启用 URL Scheme 后，应用和网站可以通过 apple-magnifier://install?url=<IPA地址> 触发 TrollStore 安装，以及通过 apple-magnifier://enable-jit?bundle-id=<BundleID> 启用 JIT。" forKey:@"footerText"];
 
 		[_specifiers addObject:installationSettingsGroupSpecifier];
 
