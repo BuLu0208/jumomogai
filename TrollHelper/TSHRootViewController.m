@@ -201,6 +201,11 @@
 				[errAlert addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:nil]];
 				[TSPresentationDelegate presentViewController:errAlert animated:YES completion:nil];
 			}
+			else
+			{
+				_specifiers = nil;
+				[self reloadSpecifiers];
+			}
 		}];
 	}];
 	[alert addAction:verifyAction];
