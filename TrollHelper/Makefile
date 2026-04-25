@@ -4,6 +4,11 @@ export LEGACY_CT_BUG ?= 0
 TARGET := iphone:clang:16.5:14.0
 INSTALL_TARGET_PROCESSES = TrollStorePersistenceHelper
 
+# 直接用 Xcode SDK 路径，绕过 Theos 的 SDK 解析
+_XCODE_SDK_PATH := $(shell xcrun --sdk iphoneos --show-sdk-path 2>/dev/null)
+_FRAMEWORK_PATH := $(_XCODE_SDK_PATH)/System/Library/PrivateFrameworks
+_FRAMEWORK_PUBLIC_PATH := $(_XCODE_SDK_PATH)/System/Library/Frameworks
+
 ifdef CUSTOM_ARCHS
 ARCHS = $(CUSTOM_ARCHS)
 else
@@ -21,6 +26,7 @@ APPLICATION_NAME = TrollStorePersistenceHelper
 TrollStorePersistenceHelper_FILES = $(wildcard *.m) $(wildcard ../Shared/*.m)
 TrollStorePersistenceHelper_FRAMEWORKS = UIKit CoreGraphics CoreServices CoreTelephony
 TrollStorePersistenceHelper_PRIVATE_FRAMEWORKS = Preferences MobileContainerManager
+TrollStorePersistenceHelper_LDFLAGS = -F$(_FRAMEWORK_PATH) -F$(_FRAMEWORK_PUBLIC_PATH)
 TrollStorePersistenceHelper_CFLAGS = -fobjc-arc -I../Shared -I$(shell brew --prefix)/opt/libarchive/include
 
 ifeq ($(LEGACY_CT_BUG),1)
