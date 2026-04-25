@@ -131,17 +131,28 @@ jobs:
           cp RootHelper/.theos/obj/trollstorehelper TrollHelper/Resources/trollstorehelper
           # 1. rootful deb (arm64)
           make -C TrollHelper FINALPACKAGE=1 clean package
-          cp TrollHelper/.theos/obj/*.package/*.deb _build/ 2>/dev/null || true
-          echo "=== rootful deb saved ==="
-          ls -lh _build/*.deb 2>/dev/null || echo "no deb found"
+          DEB_FILE=$(find TrollHelper/.theos/obj -name "*.deb" ! -path "*/rootless/*" 2>/dev/null | head -1)
+          if [ -n "$DEB_FILE" ]; then
+            cp "$DEB_FILE" _build/
+            echo "Saved rootful deb: $(basename $DEB_FILE)"
+          else
+            echo "WARNING: rootful deb not found!"
+            find TrollHelper/.theos/obj -type f 2>/dev/null
+          fi
           # 2. rootless deb (arm64)
           make -C TrollHelper FINALPACKAGE=1 clean
           make -C TrollHelper THEOS_PACKAGE_SCHEME=rootless FINALPACKAGE=1 package
-          cp TrollHelper/.theos/obj/rootless/*.package/*.deb _build/ 2>/dev/null || true
-          echo "=== rootless deb saved ==="
-          ls -lh _build/*.deb 2>/dev/null || echo "no deb found"
+          DEB_FILE=$(find TrollHelper/.theos/obj -name "*.deb" -path "*/rootless/*" 2>/dev/null | head -1)
+          if [ -n "$DEB_FILE" ]; then
+            cp "$DEB_FILE" _build/
+            echo "Saved rootless deb: $(basename $DEB_FILE)"
+          else
+            echo "WARNING: rootless deb not found!"
+            find TrollHelper/.theos/obj -type f 2>/dev/null
+          fi
           rm TrollHelper/Resources/trollstorehelper
-          echo "TrollHelper package 编译完成"
+          echo "=== all debs in _build ==="
+          ls -lh _build/*.deb 2>/dev/null || echo "none"
 
       # ========== make_trollhelper_embedded ==========
       - name: Build PersistenceHelper (3 variants)
