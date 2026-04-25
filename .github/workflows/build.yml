@@ -254,6 +254,11 @@ jobs:
           retention-days: 7
 
       # ========== 发布到 GitHub Release ==========
+      - name: Update tag to latest commit
+        run: |
+          git tag -f v2.1.1-custom
+          git push -f origin v2.1.1-custom
+
       - name: Create Release and Upload
         uses: softprops/action-gh-release@v2
         with:
