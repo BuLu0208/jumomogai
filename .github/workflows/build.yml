@@ -99,6 +99,10 @@ jobs:
       # ========== make_roothelper ==========
       - name: Build RootHelper (trollstorehelper)
         run: |
+          echo "=== 调试 SDK 信息 ==="
+          echo "THEOS=$THEOS"
+          echo "SDK symlink: $(readlink ~/theos/sdks/iPhoneOS16.5.sdk 2>/dev/null || echo 'NOT A SYMLINK')"
+          ls ~/theos/sdks/iPhoneOS16.5.sdk/System/Library/PrivateFrameworks/SpringBoardServices.framework 2>&1 || echo "SpringBoardServices NOT FOUND"
           echo "=== 编译 RootHelper ==="
           make -C RootHelper DEBUG=0
           echo "RootHelper 编译完成"
