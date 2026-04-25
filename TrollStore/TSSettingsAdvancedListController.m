@@ -80,7 +80,7 @@ extern NSUserDefaults* trollStoreUserDefaults();
 		[_specifiers addObject:uninstallationMethodSegmentSpecifier];
 	}
 
-	[(UINavigationItem *)self.navigationItem setTitle:@"Advanced"];
+	[(UINavigationItem *)self.navigationItem setTitle:@"高级设置"];
 	return _specifiers;
 }
 
