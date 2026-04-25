@@ -20,22 +20,22 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/Library/Caches/Homebrew
-          key: brew-deps-v3-${{ hashFiles('.github/workflows/build.yml') }}
-          restore-keys: brew-deps-v3-
+          key: brew-deps-v4-${{ hashFiles('.github/workflows/build.yml') }}
+          restore-keys: brew-deps-v4-
 
       # ========== 缓存：Theos + iOS SDK ==========
       - name: Cache Theos
         uses: actions/cache@v4
         with:
           path: ~/theos
-          key: theos-v4
+          key: theos-v5-${{ hashFiles('.github/workflows/build.yml') }}
 
       # ========== 缓存：fastPathSign 编译产物 ==========
       - name: Cache fastPathSign
         uses: actions/cache@v4
         with:
           path: ./Exploits/fastPathSign/fastPathSign
-          key: fps-v2-${{ hashFiles('Exploits/fastPathSign/Makefile', 'ChOma/Makefile') }}
+          key: fps-v3-${{ hashFiles('Exploits/fastPathSign/Makefile', 'ChOma/Makefile') }}
 
       # ========== 安装 Homebrew 依赖 ==========
       - name: Install dependencies
@@ -52,19 +52,27 @@ jobs:
           else
             echo "Theos 已缓存，跳过 clone"
           fi
-          # 始终使用 Xcode 自带的 iOS SDK（包含完整的私有框架）
-          mkdir -p "$THEOS/sdks"
+          # 下载 theos/sdks（包含私有框架，Xcode 15+ 已移除）
+          if [ ! -d "$THEOS/sdks/iPhoneOS16.5.sdk" ]; then
+            echo "Downloading iOS SDK from theos/sdks..."
+            curl -sL "https://github.com/theos/sdks/archive/master.zip" -o /tmp/sdks.zip
+            unzip -qo /tmp/sdks.zip -d /tmp
+            mkdir -p "$THEOS/sdks"
+            cp -R /tmp/sdks-master/iPhoneOS16.5.sdk "$THEOS/sdks/" 2>/dev/null || {
+              echo "Specific SDK not found, copying all..."
+              cp -R /tmp/sdks-master/*.sdk "$THEOS/sdks/" 2>/dev/null || true
+            }
+            rm -rf /tmp/sdks-master /tmp/sdks.zip
+          else
+            echo "SDK 已缓存"
+          fi
+          # 同时用 Xcode SDK 做编译头文件后备（以防 theos/sdks 不全）
           XCODE_SDK=$(xcrun --sdk iphoneos --show-sdk-path 2>/dev/null)
           if [ -n "$XCODE_SDK" ] && [ -d "$XCODE_SDK" ]; then
-            ln -sfn "$XCODE_SDK" "$THEOS/sdks/iPhoneOS16.5.sdk"
-            echo "Using Xcode SDK: $(basename $XCODE_SDK) -> $XCODE_SDK"
-            # 验证私有框架存在
-            ls "$XCODE_SDK/System/Library/PrivateFrameworks/SpringBoardServices.framework" >/dev/null 2>&1 && echo "✓ SpringBoardServices found" || echo "✗ SpringBoardServices missing"
-          else
-            echo "ERROR: No Xcode iOS SDK found"
-            exit 1
+            ln -sfn "$XCODE_SDK" "$THEOS/sdks/iPhoneOS17.5.sdk" 2>/dev/null || true
           fi
-          echo "Theos 安装完成"
+          echo "SDK 目录:"
+          ls "$THEOS/sdks/" 2>/dev/null
           echo "THEOS=$THEOS" >> $GITHUB_ENV
           echo "PATH=$THEOS/bin:$PATH" >> $GITHUB_ENV
 
@@ -99,11 +107,6 @@ jobs:
       # ========== make_roothelper ==========
       - name: Build RootHelper (trollstorehelper)
         run: |
-          echo "=== 调试 SDK 信息 ==="
-          echo "THEOS=$THEOS"
-          echo "SDK symlink: $(readlink ~/theos/sdks/iPhoneOS16.5.sdk 2>/dev/null || echo 'NOT A SYMLINK')"
-          ls ~/theos/sdks/iPhoneOS16.5.sdk/System/Library/PrivateFrameworks/SpringBoardServices.framework 2>&1 || echo "SpringBoardServices NOT FOUND"
-          echo "=== 编译 RootHelper ==="
           make -C RootHelper DEBUG=0
           echo "RootHelper 编译完成"
           ls -lh RootHelper/.theos/obj/trollstorehelper
@@ -111,7 +114,6 @@ jobs:
       # ========== make_trollstore ==========
       - name: Build TrollStore.app
         run: |
-          echo "=== 编译 TrollStore.app ==="
           make -C TrollStore FINALPACKAGE=1
           echo "TrollStore.app 编译完成"
           ls TrollStore/.theos/obj/TrollStore.app/
@@ -119,7 +121,6 @@ jobs:
       # ========== make_trollhelper_package ==========
       - name: Build TrollHelper (package mode)
         run: |
-          echo "=== 编译 TrollHelper (package mode) ==="
           cp RootHelper/.theos/obj/trollstorehelper TrollHelper/Resources/trollstorehelper
           make -C TrollHelper FINALPACKAGE=1 clean package
           make -C TrollHelper FINALPACKAGE=1 clean
@@ -130,7 +131,6 @@ jobs:
       # ========== make_trollhelper_embedded ==========
       - name: Build PersistenceHelper (3 variants)
         run: |
-          echo "=== 编译 PersistenceHelper Embedded ==="
           mkdir -p _build
           # 1. 标准 arm64
           make -C TrollHelper clean
@@ -151,7 +151,6 @@ jobs:
       # ========== assemble_trollstore ==========
       - name: Assemble TrollStore.tar
         run: |
-          echo "=== 打包 TrollStore.tar ==="
           cp RootHelper/.theos/obj/trollstorehelper TrollStore/.theos/obj/TrollStore.app/trollstorehelper
           cp TrollHelper/.theos/obj/TrollStorePersistenceHelper.app/TrollStorePersistenceHelper TrollStore/.theos/obj/TrollStore.app/PersistenceHelper
           export COPYFILE_DISABLE=1
@@ -162,7 +161,6 @@ jobs:
       # ========== 编译 Pwnify ==========
       - name: Build Pwnify
         run: |
-          echo "=== 编译 Pwnify ==="
           make -C Pwnify
           echo "Pwnify 编译完成"
           ls -lh Pwnify/pwnify
@@ -170,7 +168,6 @@ jobs:
       # ========== build_installer15 ==========
       - name: Build TrollHelperOTA iOS15 (arm64)
         run: |
-          echo "=== 构建 TrollHelperOTA iOS15 (arm64) ==="
           mkdir -p _build/tmp15
           unzip Victim/InstallerVictim.ipa -d _build/tmp15
           cp _build/PersistenceHelper_Embedded_Legacy_arm64 _build/TrollStorePersistenceHelperToInject
@@ -192,7 +189,6 @@ jobs:
       # ========== build_installer64e ==========
       - name: Build TrollHelperOTA arm64e
         run: |
-          echo "=== 构建 TrollHelperOTA arm64e ==="
           mkdir -p _build/tmp64e
           unzip Victim/InstallerVictim.ipa -d _build/tmp64e
           cd _build/tmp64e
