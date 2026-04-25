@@ -1,19 +1,27 @@
-@import Foundation;
+#import <Foundation/Foundation.h>
 
-// XPC 函数通过 dlopen/dlsym 动态加载，避免 SDK unavailable 编译错误
-typedef NSObject* xpc_object_t;
-typedef xpc_object_t xpc_connection_t;
-typedef void (^xpc_handler_t)(xpc_object_t object);
+// 手动声明 dlopen/dlsym，避免 SDK 不可用标记和模块导入问题
+#define _DARWIN_USE_64_BIT_INODE 0
+#include <dlfcn.h>
+#undef _DARWIN_USE_64_BIT_INODE
 
-static xpc_connection_t (*dy_xpc_connection_create_mach_service)(const char*, dispatch_queue_t, uint64_t);
-static void (*dy_xpc_connection_set_event_handler)(xpc_connection_t, xpc_handler_t);
-static void (*dy_xpc_connection_resume)(xpc_connection_t);
-static xpc_object_t (*dy_xpc_connection_send_message_with_reply_sync)(xpc_connection_t, xpc_object_t);
-static xpc_object_t (*dy_xpc_dictionary_get_value)(xpc_object_t, const char*);
-static CFTypeRef (*dy_CFXPCCreateCFObjectFromXPCObject)(xpc_object_t);
-static xpc_object_t (*dy_CFXPCCreateXPCObjectFromCFObject)(CFTypeRef);
-static xpc_object_t (*dy_CFXPCCreateXPCMessageWithCFObject)(CFTypeRef);
-static CFTypeRef (*dy_CFXPCCreateCFObjectFromXPCMessage)(xpc_object_t);
+#ifndef RTLD_LAZY
+#define RTLD_LAZY 1
+#endif
+
+extern void *dlopen(const char *, int) __attribute__((weak_import));
+extern void *dlsym(void *, const char *) __attribute__((weak_import));
+
+// XPC 函数通过 dlsym 动态加载，不依赖 SDK 声明
+static void * (*dy_xpc_connection_create_mach_service)(const char*, void*, unsigned long long);
+static void (*dy_xpc_connection_set_event_handler)(void*, void (^)(void *));
+static void (*dy_xpc_connection_resume)(void *);
+static void * (*dy_xpc_connection_send_message_with_reply_sync)(void *, void *);
+static void * (*dy_xpc_dictionary_get_value)(void *, const char *);
+static void * (*dy_CFXPCCreateCFObjectFromXPCObject)(void *);
+static void * (*dy_CFXPCCreateXPCObjectFromCFObject)(const void *);
+static void * (*dy_CFXPCCreateXPCMessageWithCFObject)(const void *);
+static void * (*dy_CFXPCCreateCFObjectFromXPCMessage)(void *);
 
 static BOOL xpc_funcs_loaded = NO;
 static void loadXPCFuncs(void) {
@@ -38,28 +46,28 @@ typedef enum {
     kAMFIActionStatus = 2,
 } AMFIXPCAction;
 
-xpc_connection_t startConnection(void) {
+static void* startConnection(void) {
 	loadXPCFuncs();
-	if (!dy_xpc_connection_create_mach_service) return nil;
-	xpc_connection_t connection = dy_xpc_connection_create_mach_service("com.apple.amfi.xpc", NULL, 0);
-    if (!connection) return nil;
-    if (dy_xpc_connection_set_event_handler) dy_xpc_connection_set_event_handler(connection, ^(xpc_object_t event) {});
+	if (!dy_xpc_connection_create_mach_service) return NULL;
+	void *connection = dy_xpc_connection_create_mach_service("com.apple.amfi.xpc", NULL, 0);
+    if (!connection) return NULL;
+    if (dy_xpc_connection_set_event_handler) dy_xpc_connection_set_event_handler(connection, ^(void *event) {});
     if (dy_xpc_connection_resume) dy_xpc_connection_resume(connection);
     return connection;
 }
 
-NSDictionary* sendXPCRequest(xpc_connection_t connection, AMFIXPCAction action) {
+static NSDictionary* sendXPCRequest(void *connection, AMFIXPCAction action) {
 	loadXPCFuncs();
 	if (!dy_CFXPCCreateXPCMessageWithCFObject || !dy_xpc_connection_send_message_with_reply_sync || !dy_xpc_dictionary_get_value || !dy_CFXPCCreateCFObjectFromXPCMessage) return nil;
-    xpc_object_t message = dy_CFXPCCreateXPCMessageWithCFObject((__bridge CFDictionaryRef) @{@"action": @(action)});
-    xpc_object_t replyMsg = dy_xpc_connection_send_message_with_reply_sync(connection, message);
+	void *message = dy_CFXPCCreateXPCMessageWithCFObject((__bridge CFDictionaryRef) @{@"action": @(action)});
+	void *replyMsg = dy_xpc_connection_send_message_with_reply_sync(connection, message);
     if (!replyMsg) return nil;
-    xpc_object_t replyObj = dy_xpc_dictionary_get_value(replyMsg, "cfreply");
+    void *replyObj = dy_xpc_dictionary_get_value(replyMsg, "cfreply");
     if (!replyObj) return nil;
     return (__bridge NSDictionary*)dy_CFXPCCreateCFObjectFromXPCMessage(replyObj);
 }
 
-BOOL getDeveloperModeState(xpc_connection_t connection) {
+static BOOL getDeveloperModeState(void *connection) {
     NSDictionary* reply = sendXPCRequest(connection, kAMFIActionStatus);
     if (!reply) return NO;
     NSObject* success = reply[@"success"];
@@ -69,7 +77,7 @@ BOOL getDeveloperModeState(xpc_connection_t connection) {
     return [(NSNumber*)status boolValue];
 }
 
-BOOL setDeveloperModeState(xpc_connection_t connection, BOOL enable) {
+static BOOL setDeveloperModeState(void *connection, BOOL enable) {
     NSDictionary* reply = sendXPCRequest(connection, enable ? kAMFIActionArm : kAMFIActionDisable);
     if (!reply) return NO;
     NSObject* success = reply[@"success"];
@@ -79,7 +87,7 @@ BOOL setDeveloperModeState(xpc_connection_t connection, BOOL enable) {
 
 BOOL checkDeveloperMode(void) {
     if (@available(iOS 16, *)) {
-        xpc_connection_t connection = startConnection();
+        void *connection = startConnection();
         if (!connection) return NO;
         return getDeveloperModeState(connection);
     } else {
@@ -89,7 +97,7 @@ BOOL checkDeveloperMode(void) {
 
 BOOL armDeveloperMode(BOOL* alreadyEnabled) {
     if (@available(iOS 16, *)) {
-        xpc_connection_t connection = startConnection();
+        void *connection = startConnection();
         if (!connection) return NO;
         BOOL enabled = getDeveloperModeState(connection);
         if (alreadyEnabled) *alreadyEnabled = enabled;
