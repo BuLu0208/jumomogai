@@ -28,7 +28,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/theos
-          key: theos-v3-${{ hashFiles('.github/workflows/build.yml') }}
+          key: theos-v4
 
       # ========== 缓存：fastPathSign 编译产物 ==========
       - name: Cache fastPathSign
@@ -49,23 +49,22 @@ jobs:
           if [ ! -d "$THEOS/bin" ]; then
             echo "Cloning Theos..."
             git clone --recursive https://github.com/theos/theos.git "$THEOS"
-            curl -sL "https://github.com/theos/sdks/archive/master.zip" -o /tmp/sdks.zip
-            unzip -qo /tmp/sdks.zip -d /tmp
-            mkdir -p "$THEOS/sdks"
-            cp /tmp/sdks-master/*.sdk "$THEOS/sdks/" 2>/dev/null || true
-            rm -rf /tmp/sdks-master /tmp/sdks.zip
-            if [ ! -d "$THEOS/sdks/iPhoneOS16.5.sdk" ]; then
-              XCODE_SDK=$(xcrun --sdk iphoneos --show-sdk-path 2>/dev/null)
-              if [ -n "$XCODE_SDK" ] && [ -d "$XCODE_SDK" ]; then
-                ln -sf "$XCODE_SDK" "$THEOS/sdks/iPhoneOS16.5.sdk"
-                echo "Symlinked SDK: $(basename $XCODE_SDK)"
-              fi
-            fi
-            echo "Theos 安装完成"
-            ls "$THEOS/sdks/"
           else
-            echo "Theos 已缓存，跳过安装"
+            echo "Theos 已缓存，跳过 clone"
           fi
+          # 始终使用 Xcode 自带的 iOS SDK（包含完整的私有框架）
+          mkdir -p "$THEOS/sdks"
+          XCODE_SDK=$(xcrun --sdk iphoneos --show-sdk-path 2>/dev/null)
+          if [ -n "$XCODE_SDK" ] && [ -d "$XCODE_SDK" ]; then
+            ln -sfn "$XCODE_SDK" "$THEOS/sdks/iPhoneOS16.5.sdk"
+            echo "Using Xcode SDK: $(basename $XCODE_SDK) -> $XCODE_SDK"
+            # 验证私有框架存在
+            ls "$XCODE_SDK/System/Library/PrivateFrameworks/SpringBoardServices.framework" >/dev/null 2>&1 && echo "✓ SpringBoardServices found" || echo "✗ SpringBoardServices missing"
+          else
+            echo "ERROR: No Xcode iOS SDK found"
+            exit 1
+          fi
+          echo "Theos 安装完成"
           echo "THEOS=$THEOS" >> $GITHUB_ENV
           echo "PATH=$THEOS/bin:$PATH" >> $GITHUB_ENV
 
