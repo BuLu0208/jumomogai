@@ -1,9 +1,14 @@
 @import Foundation;
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunavailable-declarations"
+// SDK 标记 xpc_connection_create_mach_service 为 iOS 不可用
+// 但 TrollStore 以 root 权限运行需要直接调用，所以强制使用自定义声明
+#ifdef __XPC_H__
+#undef __XPC_H__
+#endif
 
 #ifndef __XPC_H__
+#define __XPC_H__
+
 // Types
 typedef NSObject* xpc_object_t;
 typedef xpc_object_t xpc_connection_t;
@@ -146,5 +151,3 @@ BOOL armDeveloperMode(BOOL* alreadyEnabled) {
 
     return YES;
 }
-
-#pragma clang diagnostic pop
