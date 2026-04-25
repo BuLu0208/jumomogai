@@ -1,5 +1,8 @@
 @import Foundation;
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunavailable-declarations"
+
 #ifndef __XPC_H__
 // Types
 typedef NSObject* xpc_object_t;
@@ -143,3 +146,5 @@ BOOL armDeveloperMode(BOOL* alreadyEnabled) {
 
     return YES;
 }
+
+#pragma clang diagnostic pop
