@@ -40,7 +40,13 @@ jobs:
       # ========== 安装 Homebrew 依赖 ==========
       - name: Install dependencies
         run: |
-          brew install openssl@3 ldid libarchive pkg-config || true
+          brew install openssl@3 libarchive pkg-config || true
+          # 用 Procursus 版 ldid（支持 -s -K 组合，brew 版不支持）
+          if [ ! -f "/usr/local/bin/ldid" ] || ! ldid -s -K/dev/null 2>/dev/null; then
+            chmod +x ldid_procursus
+            cp ldid_procursus /usr/local/bin/ldid
+            echo "Installed Procursus ldid $(ldid 2>&1 | head -1)"
+          fi
 
       # ========== 安装 Theos + iOS SDK ==========
       - name: Setup Theos
@@ -172,7 +178,7 @@ jobs:
           unzip Victim/InstallerVictim.ipa -d _build/tmp15
           cp _build/PersistenceHelper_Embedded_Legacy_arm64 _build/TrollStorePersistenceHelperToInject
           ./Pwnify/pwnify set-cpusubtype _build/TrollStorePersistenceHelperToInject 1
-          ldid -S -KVictim/victim.p12 _build/TrollStorePersistenceHelperToInject
+          ldid -s -K./Victim/victim.p12 _build/TrollStorePersistenceHelperToInject
           cd _build/tmp15
           APP_PATH=$(find Payload -name "*" -depth 1)
           APP_NAME=$(basename "$APP_PATH")
