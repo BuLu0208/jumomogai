@@ -21,8 +21,6 @@ APPLICATION_NAME = TrollStorePersistenceHelper
 TrollStorePersistenceHelper_FILES = $(wildcard *.m) $(wildcard ../Shared/*.m)
 TrollStorePersistenceHelper_FRAMEWORKS = UIKit CoreGraphics CoreServices CoreTelephony
 TrollStorePersistenceHelper_PRIVATE_FRAMEWORKS = Preferences MobileContainerManager
-# 使用 weak_framework 避免 SDK 缺少 PrivateFrameworks 导致链接失败
-TrollStorePersistenceHelper_LDFLAGS = -weak_framework Preferences -weak_framework MobileContainerManager
 TrollStorePersistenceHelper_CFLAGS = -fobjc-arc -I../Shared -I$(shell brew --prefix)/opt/libarchive/include
 
 ifeq ($(LEGACY_CT_BUG),1)
@@ -37,7 +35,6 @@ TrollStorePersistenceHelper_CFLAGS += -DEMBEDDED_ROOT_HELPER=1
 TrollStorePersistenceHelper_FILES += $(wildcard ../RootHelper/*.m)
 TrollStorePersistenceHelper_LIBRARIES += archive
 TrollStorePersistenceHelper_PRIVATE_FRAMEWORKS += SpringBoardServices BackBoardServices FrontBoardServices
-TrollStorePersistenceHelper_LDFLAGS += -weak_framework SpringBoardServices -weak_framework BackBoardServices -weak_framework FrontBoardServices
 endif
 
 include $(THEOS_MAKE_PATH)/application.mk

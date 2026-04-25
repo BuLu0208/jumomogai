@@ -27,8 +27,7 @@ $(HELPER_NAME)_CFLAGS = -fobjc-arc -I../Shared $(shell pkg-config --cflags libcr
 $(HELPER_NAME)_INSTALL_PATH = /usr/local/bin
 $(HELPER_NAME)_LIBRARIES = archive
 $(HELPER_NAME)_FRAMEWORKS = CoreTelephony
-# 使用 weak_framework 避免 SDK 缺少 PrivateFrameworks 导致链接失败
-$(HELPER_NAME)_LDFLAGS += -weak_framework SpringBoardServices -weak_framework BackBoardServices -weak_framework MobileContainerManager -weak_framework FrontBoardServices -weak_framework RunningBoardServices
+$(HELPER_NAME)_PRIVATE_FRAMEWORKS = SpringBoardServices BackBoardServices MobileContainerManager FrontBoardServices RunningBoardServices
 
 ifdef TROLLSTORE_LITE
 $(HELPER_NAME)_CFLAGS += -DTROLLSTORE_LITE -DDISABLE_SIGNING=1
