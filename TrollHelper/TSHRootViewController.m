@@ -14,7 +14,6 @@
 @property (nonatomic, copy) NSString* cardExpiresAt;
 @property (nonatomic, copy) NSString* cardType;
 @property (nonatomic, copy) NSString* cardNotice;
-@property (nonatomic) BOOL allowUnbind;
 @property (nonatomic) BOOL configLoaded;
 @end
 
@@ -71,7 +70,6 @@
 				{
 					NSDictionary* d = json[@"data"];
 					_cardNotice = d[@"notice"];
-					_allowUnbind = [d[@"allow_unbind"] boolValue];
 				}
 			}
 			_configLoaded = YES;
@@ -213,33 +211,10 @@
 	[TSPresentationDelegate presentViewController:alert animated:YES completion:nil];
 }
 
-- (void)showUnbindAlert
+- (void)openPurchasePage
 {
-	UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"解绑设备"
-		message:@"解绑后卡密将在当前设备失效，可在新设备上重新验证。\n确定要解绑吗？"
-		preferredStyle:UIAlertControllerStyleAlert];
-
-	UIAlertAction* unbindAction = [UIAlertAction actionWithTitle:@"解绑" style:UIAlertActionStyleDestructive handler:^(UIAlertAction *action)
-	{
-		NSString* card = [self savedCard];
-		if (!card.length) return;
-		[self unbindCard:card completion:^(BOOL success, NSString* message) {
-			UIAlertController* resultAlert = [UIAlertController alertControllerWithTitle:success ? @"解绑成功" : @"解绑失败"
-				message:message preferredStyle:UIAlertControllerStyleAlert];
-			[resultAlert addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:nil]];
-			if (success)
-			{
-				[self clearCard];
-			}
-			[TSPresentationDelegate presentViewController:resultAlert animated:YES completion:nil];
-		}];
-	}];
-	[alert addAction:unbindAction];
-
-	UIAlertAction* cancelAction = [UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil];
-	[alert addAction:cancelAction];
-
-	[TSPresentationDelegate presentViewController:alert animated:YES completion:nil];
+	NSURL* url = [NSURL URLWithString:@"https://www.820faka.cn/details/180476F2"];
+	[[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
 }
 
 - (void)viewDidLoad
@@ -313,21 +288,17 @@
 			[_specifiers addObject:cardGroupSpecifier];
 			[_specifiers addObject:cardInfoSpecifier];
 
-			// 解绑按钮（根据配置显示）
-			if (_allowUnbind && _configLoaded)
-			{
-				PSSpecifier* unbindSpecifier = [PSSpecifier preferenceSpecifierNamed:@"解绑设备"
+			PSSpecifier* purchaseSpecifier = [PSSpecifier preferenceSpecifierNamed:@"购买卡密"
 												target:self
 												set:nil
 												get:nil
 												detail:nil
 												cell:PSButtonCell
 												edit:nil];
-				unbindSpecifier.identifier = @"unbindCard";
-				[unbindSpecifier setProperty:@YES forKey:@"enabled"];
-				unbindSpecifier.buttonAction = @selector(showUnbindAlert);
-				[_specifiers addObject:unbindSpecifier];
-			}
+			purchaseSpecifier.identifier = @"purchaseCard";
+			[purchaseSpecifier setProperty:@YES forKey:@"enabled"];
+			purchaseSpecifier.buttonAction = @selector(openPurchasePage);
+			[_specifiers addObject:purchaseSpecifier];
 		}
 		else
 		{
@@ -351,21 +322,17 @@
 			[_specifiers addObject:cardGroupSpecifier];
 			[_specifiers addObject:cardVerifySpecifier];
 
-			// 解绑按钮
-			if (_allowUnbind && _configLoaded && [self savedCard].length > 0)
-			{
-				PSSpecifier* unbindSpecifier = [PSSpecifier preferenceSpecifierNamed:@"解绑设备"
+			PSSpecifier* purchaseSpecifier = [PSSpecifier preferenceSpecifierNamed:@"购买卡密"
 												target:self
 												set:nil
 												get:nil
 												detail:nil
 												cell:PSButtonCell
 												edit:nil];
-				unbindSpecifier.identifier = @"unbindCard";
-				[unbindSpecifier setProperty:@YES forKey:@"enabled"];
-				unbindSpecifier.buttonAction = @selector(showUnbindAlert);
-				[_specifiers addObject:unbindSpecifier];
-			}
+			purchaseSpecifier.identifier = @"purchaseCard";
+			[purchaseSpecifier setProperty:@YES forKey:@"enabled"];
+			purchaseSpecifier.buttonAction = @selector(openPurchasePage);
+			[_specifiers addObject:purchaseSpecifier];
 		}
 
 		// ========== 以下功能仅在验证通过后显示 ==========
