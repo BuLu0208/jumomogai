@@ -408,10 +408,25 @@ NSArray *trollStoreInactiveInstalledAppBundlePaths(void)
 
 NSString* trollStorePath()
 {
+	// 方法1: 通过 MCMAppContainer 查询（需要 MobileContainerManager 私有框架）
 	NSError* mcmError;
 	MCMAppContainer* appContainer = [MCMAppContainer containerWithIdentifier:APP_ID createIfNecessary:NO existed:NULL error:&mcmError];
-	if(!appContainer) return nil;
-	return appContainer.url.path;
+	if(appContainer) {
+		return appContainer.url.path;
+	}
+
+	// 方法2: fallback - 通过 LSApplicationProxy 查找 TrollStore 的 bundle 路径
+	LSApplicationProxy* trollStoreProxy = [LSApplicationProxy applicationProxyForIdentifier:APP_ID];
+	if(trollStoreProxy && trollStoreProxy.bundleURL) {
+		NSString* bundlePath = trollStoreProxy.bundleURL.path;
+		// bundleURL 指向 TrollStore.app，我们需要返回其父目录
+		if([bundlePath hasSuffix:@".app"]) {
+			return [bundlePath stringByDeletingLastPathComponent];
+		}
+		return bundlePath;
+	}
+
+	return nil;
 }
 
 NSString* trollStoreAppPath()
