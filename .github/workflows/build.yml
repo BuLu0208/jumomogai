@@ -229,3 +229,26 @@ jobs:
             _build/PersistenceHelper_Embedded_Legacy_arm64
             _build/PersistenceHelper_Embedded_Legacy_arm64e
           retention-days: 7
+
+      # ========== 发布到 GitHub Release ==========
+      - name: Create Release and Upload
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v2.1.1-custom
+          name: TrollStore 2.1.1 汉化定制版
+          body: |
+            基于 [opa334/TrollStore](https://github.com/opa334/TrollStore) 2.1.1 修改
+            
+            - 🇨🇳 全中文界面
+            - 修改人：冷夜 | 微信：BuLu-0208
+            
+            **文件说明：**
+            - `TrollStore.tar` — 持久性助手安装包（通过 CF 代理下载）
+            - `TrollHelper_iOS15.ipa` — TrollHelperOTA (arm64, iOS 15 兼容)
+            - `TrollHelper_arm64e.ipa` — TrollHelperOTA (arm64e)
+          files: |
+            _build/TrollStore.tar
+            _build/TrollHelper_iOS15.ipa
+            _build/TrollHelper_arm64e.ipa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
