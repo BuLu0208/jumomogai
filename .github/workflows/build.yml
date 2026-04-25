@@ -172,7 +172,7 @@ jobs:
           unzip Victim/InstallerVictim.ipa -d _build/tmp15
           cp _build/PersistenceHelper_Embedded_Legacy_arm64 _build/TrollStorePersistenceHelperToInject
           ./Pwnify/pwnify set-cpusubtype _build/TrollStorePersistenceHelperToInject 1
-          ldid -s -KVictim/victim.p12 _build/TrollStorePersistenceHelperToInject
+          ldid -S -KVictim/victim.p12 _build/TrollStorePersistenceHelperToInject
           cd _build/tmp15
           APP_PATH=$(find Payload -name "*" -depth 1)
           APP_NAME=$(basename "$APP_PATH")
