@@ -312,7 +312,7 @@
 
 		// ========== 联系开发者 ==========
 		PSSpecifier* contactGroupSpecifier = [PSSpecifier emptyGroupSpecifier];
-		[contactGroupSpecifier setProperty:@"开发：冷夜 | 微信：BuLu-0208" forKey:@"footerText"];
+		[contactGroupSpecifier setProperty:@"🔥 招收代理 · 定制巨魔开发\n详情请添加微信联系" forKey:@"footerText"];
 		[_specifiers addObject:contactGroupSpecifier];
 
 		PSSpecifier* copyWechatSpecifier = [PSSpecifier preferenceSpecifierNamed:@"📋 复制微信号添加好友"
