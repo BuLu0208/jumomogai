@@ -9,6 +9,10 @@ on:
         description: 'Release tag (leave empty to build only, no release)'
         required: false
         default: ''
+      ref:
+        description: 'Git ref to build (branch/tag/SHA). Default: main'
+        required: false
+        default: ''
 
 jobs:
   build:
@@ -18,6 +22,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.inputs.ref || 'main' }}
           submodules: 'recursive'
 
       # ========== 缓存：Homebrew 依赖 ==========
@@ -273,13 +278,10 @@ jobs:
           name: TrollStore 2.1.1 汉化定制版
           body: |
             基于 [opa334/TrollStore](https://github.com/opa334/TrollStore) 2.1.1 修改
-            
-            - 🇨🇳 全中文界面
-            - 🔑 卡密验证制（购买卡密后激活）
-            - 🏪 闲鱼搜：巨魔工作室
+            ${{ github.event.inputs.release_tag == 'jumogongzuoshi' && '巨魔工作室定制版 - 卡密验证制' || '老司机巨魔定制版 - 无需卡密验证' }}
             
             **文件说明：**
-            - `TrollStore.tar` — 持久性助手安装包（通过 CF 代理下载）
+            - `TrollStore.tar` — 持久性助手安装包
             - `TrollHelper_iOS15.ipa` — TrollHelperOTA (arm64, iOS 15 兼容)
             - `TrollHelper_arm64e.ipa` — TrollHelperOTA (arm64e)
             - `*.deb` — 越狱插件包（Dopamine/无根越狱安装用）
