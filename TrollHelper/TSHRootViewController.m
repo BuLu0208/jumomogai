@@ -24,13 +24,17 @@
 
 - (NSString*)getDeviceId
 {
-	// Use hardware serial number so it matches TrollInstallerX
-	size_t bufSize = 256;
-	char buf[256] = {0};
-	int result = sysctlbyname("hw.serialnumber", buf, &bufSize, NULL, 0);
-	if (result == 0 && buf[0] != '\0') {
-		return [[NSString alloc] initWithUTF8String:buf];
+	// Use IOKit to get hardware serial number (works on iOS 16+)
+	io_service_t platformExpert = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPlatformExpertDevice"));
+	if (platformExpert) {
+		CFStringRef serial = IORegistryEntryCreateCFProperty(platformExpert, CFSTR("IOPlatformSerialNumber"), kCFAllocatorDefault, 0);
+		IOObjectRelease(platformExpert);
+		if (serial) {
+			NSString *result = (__bridge_transfer NSString *)serial;
+			if (result.length > 0) return result;
+		}
 	}
+	// Fallback to machine model
 	struct utsname utsinfo;
 	uname(&utsinfo);
 	return [[NSString alloc] initWithBytes:utsinfo.machine length:strlen(utsinfo.machine) encoding:NSASCIIStringEncoding];
