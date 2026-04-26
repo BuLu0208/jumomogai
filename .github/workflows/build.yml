@@ -275,7 +275,8 @@ jobs:
             基于 [opa334/TrollStore](https://github.com/opa334/TrollStore) 2.1.1 修改
             
             - 🇨🇳 全中文界面
-            - 🚀 科学上网：老司机V jiesuo66688
+            - 🔑 卡密验证制（购买卡密后激活）
+            - 🏪 闲鱼搜：巨魔工作室
             
             **文件说明：**
             - `TrollStore.tar` — 持久性助手安装包（通过 CF 代理下载）
