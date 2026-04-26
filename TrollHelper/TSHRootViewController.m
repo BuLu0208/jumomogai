@@ -1,8 +1,6 @@
 #import "TSHRootViewController.h"
 #import <TSUtil.h>
 #import <TSPresentationDelegate.h>
-#include <dlfcn.h>
-#include <sys/utsname.h>
 
 // ========== 卡密验证系统 ==========
 #define KAMI_API_URL @"https://kami.lengye.top"
@@ -24,20 +22,12 @@
 
 - (NSString*)getDeviceId
 {
-	// Use MobileGestalt to get hardware serial number
-	typedef CFStringRef (*MGCopyAnswer_t)(CFStringRef);
-	MGCopyAnswer_t MGCopyAnswer = (MGCopyAnswer_t)dlsym(RTLD_DEFAULT, "MGCopyAnswer");
-	if (MGCopyAnswer) {
-		CFStringRef serial = MGCopyAnswer(CFSTR("SerialNumber"));
-		if (serial) {
-			NSString *result = (__bridge_transfer NSString *)serial;
-			if (result.length > 0) return result;
-		}
-	}
-	// Fallback to machine model
-	struct utsname utsinfo;
-	uname(&utsinfo);
-	return [[NSString alloc] initWithBytes:utsinfo.machine length:strlen(utsinfo.machine) encoding:NSASCIIStringEncoding];
+	NSString *path = @"/var/mobile/Library/Caches/com.bulu.deviceid";
+	NSString *existing = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:nil];
+	if (existing.length > 0) return existing;
+	NSString *uuid = [[NSUUID UUID] UUIDString];
+	[uuid writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:nil];
+	return uuid;
 }
 
 - (BOOL)isActivated
