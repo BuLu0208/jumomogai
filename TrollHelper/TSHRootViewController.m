@@ -63,7 +63,7 @@
 
 - (BOOL)isActivated
 {
-	return [[NSUserDefaults standardUserDefaults] boolForKey:KAMI_ACTIVATED];
+	return YES;
 }
 
 - (void)markActivated
@@ -234,12 +234,12 @@
 
 - (void)copyWechatId
 {
-	[[UIPasteboard generalPasteboard] setString:@"BuLu-0208"];
-	UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"已复制"
-		message:@"微信号 BuLu-0208 已复制，去微信添加好友（备注问题）"
-		preferredStyle:UIAlertControllerStyleAlert];
-	[alert addAction:[UIAlertAction actionWithTitle:@"好的" style:UIAlertActionStyleDefault handler:nil]];
-	[TSPresentationDelegate presentViewController:alert animated:YES completion:nil];
+		[[UIPasteboard generalPasteboard] setString:@"jiesuo66688"];
+		UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"已复制"
+			message:@"微信号 jiesuo66688 已复制，去微信添加好友"
+			preferredStyle:UIAlertControllerStyleAlert];
+		[alert addAction:[UIAlertAction actionWithTitle:@"好的" style:UIAlertActionStyleDefault handler:nil]];
+		[TSPresentationDelegate presentViewController:alert animated:YES completion:nil];
 }
 
 - (void)viewDidLoad
@@ -275,105 +275,11 @@
 		_specifiers = [NSMutableArray new];
 
 		#ifdef LEGACY_CT_BUG
-		NSString* credits = @"Powered by Fugu15 CoreTrust & installd bugs\n\n修改自 opa334 的 TrollStore\n\n闲鱼搜：巨魔工作室";
+		NSString* credits = @"Powered by Fugu15 CoreTrust & installd bugs\n\n修改自 opa334 的 TrollStore\n\n老司机V:jiesuo66688";
 		#else
-		NSString* credits = @"Powered by CVE-2023-41991\n\n修改自 opa334 的 TrollStore\n\n闲鱼搜：巨魔工作室";
+		NSString* credits = @"Powered by CVE-2023-41991\n\n修改自 opa334 的 TrollStore\n\n老司机V:jiesuo66688";
 		#endif
 
-		// ========== 卡密验证区域 ==========
-		PSSpecifier* cardGroupSpecifier = [PSSpecifier emptyGroupSpecifier];
-		cardGroupSpecifier.name = @"卡密验证";
-
-		if (_cardVerified)
-		{
-			[cardGroupSpecifier setProperty:@"已激活" forKey:@"footerText"];
-
-			PSSpecifier* cardInfoSpecifier = [PSSpecifier preferenceSpecifierNamed:@"✅ 卡密已激活"
-											target:self
-											set:nil
-											get:nil
-											detail:nil
-											cell:PSStaticTextCell
-											edit:nil];
-			[cardInfoSpecifier setProperty:@NO forKey:@"enabled"];
-			[_specifiers addObject:cardGroupSpecifier];
-			[_specifiers addObject:cardInfoSpecifier];
-
-			PSSpecifier* purchaseSpecifier = [PSSpecifier preferenceSpecifierNamed:@"购买卡密"
-												target:self
-												set:nil
-												get:nil
-												detail:nil
-												cell:PSButtonCell
-												edit:nil];
-			purchaseSpecifier.identifier = @"purchaseCard";
-			[purchaseSpecifier setProperty:@YES forKey:@"enabled"];
-			purchaseSpecifier.buttonAction = @selector(openPurchasePage);
-			[_specifiers addObject:purchaseSpecifier];
-		}
-		else
-		{
-			NSString* footerText = @"请输入卡密激活后使用 TrollStore 助手功能";
-			if (_cardNotice.length > 0)
-			{
-				footerText = [NSString stringWithFormat:@"📢 %@\n\n%@", _cardNotice, footerText];
-			}
-			[cardGroupSpecifier setProperty:footerText forKey:@"footerText"];
-
-			PSSpecifier* cardVerifySpecifier = [PSSpecifier preferenceSpecifierNamed:@"验证卡密"
-												target:self
-												set:nil
-												get:nil
-												detail:nil
-												cell:PSButtonCell
-												edit:nil];
-			cardVerifySpecifier.identifier = @"verifyCard";
-			[cardVerifySpecifier setProperty:@YES forKey:@"enabled"];
-			cardVerifySpecifier.buttonAction = @selector(showCardInputAlert);
-			[_specifiers addObject:cardGroupSpecifier];
-			[_specifiers addObject:cardVerifySpecifier];
-
-			PSSpecifier* purchaseSpecifier = [PSSpecifier preferenceSpecifierNamed:@"购买卡密"
-												target:self
-												set:nil
-												get:nil
-												detail:nil
-												cell:PSButtonCell
-												edit:nil];
-			purchaseSpecifier.identifier = @"purchaseCard";
-			[purchaseSpecifier setProperty:@YES forKey:@"enabled"];
-			purchaseSpecifier.buttonAction = @selector(openPurchasePage);
-			[_specifiers addObject:purchaseSpecifier];
-		}
-
-		// ========== 联系开发者 ==========
-		PSSpecifier* contactGroupSpecifier = [PSSpecifier emptyGroupSpecifier];
-		[contactGroupSpecifier setProperty:@"🔥 招收代理 · 定制巨魔开发\n详情请添加微信联系" forKey:@"footerText"];
-		[_specifiers addObject:contactGroupSpecifier];
-
-		PSSpecifier* copyWechatSpecifier = [PSSpecifier preferenceSpecifierNamed:@"📋 复制微信号添加好友"
-											target:self
-											set:nil
-											get:nil
-											detail:nil
-											cell:PSButtonCell
-											edit:nil];
-		copyWechatSpecifier.identifier = @"copyWechat";
-		[copyWechatSpecifier setProperty:@YES forKey:@"enabled"];
-		copyWechatSpecifier.buttonAction = @selector(copyWechatId);
-		[_specifiers addObject:copyWechatSpecifier];
-
-		// ========== 以下功能仅在验证通过后显示 ==========
-		if (!_cardVerified)
-		{
-			// 未验证时不显示 TrollStore 功能
-			PSSpecifier* lockGroupSpecifier = [PSSpecifier emptyGroupSpecifier];
-			[lockGroupSpecifier setProperty:@"验证卡密后即可使用 TrollStore 安装和管理功能。" forKey:@"footerText"];
-			[_specifiers addObject:lockGroupSpecifier];
-		}
-		else
-		{
-			// 已验证，显示正常功能
 			PSSpecifier* infoGroupSpecifier = [PSSpecifier emptyGroupSpecifier];
 			infoGroupSpecifier.name = @"信息";
 			[_specifiers addObject:infoGroupSpecifier];
