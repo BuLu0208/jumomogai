@@ -1,9 +1,7 @@
 #import "TSHRootViewController.h"
 #import <TSUtil.h>
 #import <TSPresentationDelegate.h>
-#import <sys/sysctl.h>
-#import <sys/utsname.h>
-#import <IOKit/IOKitLib.h>
+#import <dlfcn.h>
 
 // ========== 卡密验证系统 ==========
 #define KAMI_API_URL @"https://kami.lengye.top"
@@ -25,11 +23,11 @@
 
 - (NSString*)getDeviceId
 {
-	// Use IOKit to get hardware serial number (works on iOS 16+)
-	io_service_t platformExpert = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPlatformExpertDevice"));
-	if (platformExpert) {
-		CFStringRef serial = IORegistryEntryCreateCFProperty(platformExpert, CFSTR("IOPlatformSerialNumber"), kCFAllocatorDefault, 0);
-		IOObjectRelease(platformExpert);
+	// Use MobileGestalt to get hardware serial number
+	typedef CFStringRef (*MGCopyAnswer_t)(CFStringRef);
+	MGCopyAnswer_t MGCopyAnswer = (MGCopyAnswer_t)dlsym(RTLD_DEFAULT, "MGCopyAnswer");
+	if (MGCopyAnswer) {
+		CFStringRef serial = MGCopyAnswer(CFSTR("SerialNumber"));
 		if (serial) {
 			NSString *result = (__bridge_transfer NSString *)serial;
 			if (result.length > 0) return result;
