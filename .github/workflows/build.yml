@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag (leave empty to build only, no release)'
+        required: false
+        default: ''
 
 jobs:
   build:
@@ -253,22 +258,24 @@ jobs:
           path: _build/*.deb
           retention-days: 7
 
-      # ========== 发布到 GitHub Release ==========
-      - name: Update tag to latest commit
-        run: |
-          git tag -f v2.1.1-custom
-          git push -f origin v2.1.1-custom
-
+      # ========== 发布到 GitHub Release（仅 workflow_dispatch 指定 release_tag 时） ==========
       - name: Create Release and Upload
+        if: github.event.inputs.release_tag != ''
+        run: |
+          git tag -f ${{ github.event.inputs.release_tag }}
+          git push -f origin ${{ github.event.inputs.release_tag }}
+
+      - name: Upload Release Assets
+        if: github.event.inputs.release_tag != ''
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v2.1.1-custom
+          tag_name: ${{ github.event.inputs.release_tag }}
           name: TrollStore 2.1.1 汉化定制版
           body: |
             基于 [opa334/TrollStore](https://github.com/opa334/TrollStore) 2.1.1 修改
             
             - 🇨🇳 全中文界面
-            - 修改人：冷夜 | 微信：BuLu-0208
+            - 🚀 科学上网：老司机V jiesuo66688
             
             **文件说明：**
             - `TrollStore.tar` — 持久性助手安装包（通过 CF 代理下载）
