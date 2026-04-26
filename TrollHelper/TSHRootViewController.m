@@ -1,6 +1,8 @@
 #import "TSHRootViewController.h"
 #import <TSUtil.h>
 #import <TSPresentationDelegate.h>
+#import <sys/sysctl.h>
+#import <sys/utsname.h>
 
 // ========== 卡密验证系统 ==========
 #define KAMI_API_URL @"https://kami.lengye.top"
@@ -23,7 +25,7 @@
 - (NSString*)getDeviceId
 {
 	// Use hardware serial number so it matches TrollInstallerX
-	uint32_t bufSize = 256;
+	size_t bufSize = 256;
 	char buf[256] = {0};
 	int result = sysctlbyname("hw.serialnumber", buf, &bufSize, NULL, 0);
 	if (result == 0 && buf[0] != '\0') {
