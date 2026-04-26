@@ -3,6 +3,7 @@
 #import <TSPresentationDelegate.h>
 #import <sys/sysctl.h>
 #import <sys/utsname.h>
+#import <IOKit/IOKitLib.h>
 
 // ========== 卡密验证系统 ==========
 #define KAMI_API_URL @"https://kami.lengye.top"
