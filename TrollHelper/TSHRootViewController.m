@@ -22,7 +22,16 @@
 
 - (NSString*)getDeviceId
 {
-	return [[UIDevice currentDevice] identifierForVendor].UUIDString;
+	// Use hardware serial number so it matches TrollInstallerX
+	uint32_t bufSize = 256;
+	char buf[256] = {0};
+	int result = sysctlbyname("hw.serialnumber", buf, &bufSize, NULL, 0);
+	if (result == 0 && buf[0] != '\0') {
+		return [[NSString alloc] initWithUTF8String:buf];
+	}
+	struct utsname utsinfo;
+	uname(&utsinfo);
+	return [[NSString alloc] initWithBytes:utsinfo.machine length:strlen(utsinfo.machine) encoding:NSASCIIStringEncoding];
 }
 
 - (BOOL)isActivated
