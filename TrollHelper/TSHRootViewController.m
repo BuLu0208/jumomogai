@@ -1,8 +1,6 @@
 #import "TSHRootViewController.h"
 #import <TSUtil.h>
 #import <TSPresentationDelegate.h>
-#include <dlfcn.h>
-#include <CoreFoundation/CoreFoundation.h>
 
 // ========== 卡密验证系统 ==========
 #define KAMI_API_URL @"https://kami.lengye.top"
@@ -24,20 +22,41 @@
 
 - (NSString*)getDeviceId
 {
-	// Get hardware serial number via MobileGestalt (unique per device)
-	typedef CFStringRef (*MGCopyAnswerFunc)(CFStringRef);
-	MGCopyAnswerFunc MGCopyAnswer = (MGCopyAnswerFunc)dlsym(RTLD_DEFAULT, "MGCopyAnswer");
-	if (MGCopyAnswer) {
-		CFStringRef serial = MGCopyAnswer(CFSTR("SerialNumber"));
-		if (serial) {
-			NSString *result = (__bridge_transfer NSString *)serial;
-			if (result.length > 0) return result;
-		}
-	}
-	// Fallback to machine model
+	// Device fingerprint: combine multiple public hardware/software properties
+	// Both TrollInstallerX and persistence helper can read these identically
+	NSMutableString *raw = [NSMutableString new];
+
+	// Hardware model
 	struct utsname utsinfo;
 	uname(&utsinfo);
-	return [[NSString alloc] initWithBytes:utsinfo.machine length:strlen(utsinfo.machine) encoding:NSASCIIStringEncoding];
+	[raw appendFormat:@"%s|", utsinfo.machine];
+
+	// System version
+	[raw appendFormat:@"%@|", [[UIDevice currentDevice] systemVersion]];
+
+	// Physical memory (MB)
+	NSUInteger mem = [[NSProcessInfo processInfo] physicalMemory] / (1024 * 1024);
+	[raw appendFormat:@"%lu|", (unsigned long)mem];
+
+	// Screen size + scale
+	UIScreen *screen = [UIScreen mainScreen];
+	CGFloat scale = [screen scale];
+	CGSize nativeSize = [screen nativeBounds].size;
+	int w = (int)nativeSize.width;
+	int h = (int)nativeSize.height;
+	[raw appendFormat:@"%dx%d|%.1f|", w, h, scale];
+
+	// Processor count
+	[raw appendFormat:@"%lu", (unsigned long)[[NSProcessInfo processInfo] processorCount]];
+
+	// SHA256 hash, take first 16 hex chars
+	unsigned char hash[CC_SHA256_DIGEST_LENGTH];
+	CC_SHA256([raw UTF8String], (CC_LONG)[raw lengthOfBytesUsingEncoding:NSUTF8StringEncoding], hash);
+	NSMutableString *hex = [NSMutableString stringWithCapacity:16];
+	for (int i = 0; i < 8; i++) {
+		[hex appendFormat:@"%02x", hash[i]];
+	}
+	return hex;
 }
 }
 
