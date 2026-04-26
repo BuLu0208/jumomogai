@@ -1,8 +1,8 @@
 #import "TSHRootViewController.h"
 #import <TSUtil.h>
 #import <TSPresentationDelegate.h>
-#import <dlfcn.h>
-#import <sys/utsname.h>
+#include <dlfcn.h>
+#include <sys/utsname.h>
 
 // ========== 卡密验证系统 ==========
 #define KAMI_API_URL @"https://kami.lengye.top"
