@@ -1,6 +1,8 @@
 #import "TSHRootViewController.h"
 #import <TSUtil.h>
 #import <TSPresentationDelegate.h>
+#include <sys/utsname.h>
+#import <CommonCrypto/CommonDigest.h>
 
 // ========== 卡密验证系统 ==========
 #define KAMI_API_URL @"https://kami.lengye.top"
@@ -57,7 +59,6 @@
 		[hex appendFormat:@"%02x", hash[i]];
 	}
 	return hex;
-}
 }
 
 - (BOOL)isActivated
