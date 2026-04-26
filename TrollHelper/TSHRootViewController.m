@@ -196,6 +196,16 @@
 	[[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
 }
 
+- (void)copyWechatId
+{
+	[[UIPasteboard generalPasteboard] setString:@"BuLu-0208"];
+	UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"已复制"
+		message:@"微信号 BuLu-0208 已复制，去微信添加好友（备注问题）"
+		preferredStyle:UIAlertControllerStyleAlert];
+	[alert addAction:[UIAlertAction actionWithTitle:@"好的" style:UIAlertActionStyleDefault handler:nil]];
+	[TSPresentationDelegate presentViewController:alert animated:YES completion:nil];
+}
+
 - (void)viewDidLoad
 {
 	[super viewDidLoad];
@@ -299,6 +309,23 @@
 			purchaseSpecifier.buttonAction = @selector(openPurchasePage);
 			[_specifiers addObject:purchaseSpecifier];
 		}
+
+		// ========== 联系开发者 ==========
+		PSSpecifier* contactGroupSpecifier = [PSSpecifier emptyGroupSpecifier];
+		[contactGroupSpecifier setProperty:@"开发：冷夜 | 微信：BuLu-0208" forKey:@"footerText"];
+		[_specifiers addObject:contactGroupSpecifier];
+
+		PSSpecifier* copyWechatSpecifier = [PSSpecifier preferenceSpecifierNamed:@"📋 复制微信号添加好友"
+											target:self
+											set:nil
+											get:nil
+											detail:nil
+											cell:PSButtonCell
+											edit:nil];
+		copyWechatSpecifier.identifier = @"copyWechat";
+		[copyWechatSpecifier setProperty:@YES forKey:@"enabled"];
+		copyWechatSpecifier.buttonAction = @selector(copyWechatId);
+		[_specifiers addObject:copyWechatSpecifier];
 
 		// ========== 以下功能仅在验证通过后显示 ==========
 		if (!_cardVerified)
