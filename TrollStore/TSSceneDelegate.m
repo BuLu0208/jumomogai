@@ -156,9 +156,32 @@
 	_window.rootViewController = _rootViewController;
 	[_window makeKeyAndVisible];
 
+	// ========== 清除计划：版本已停用，拦截正常使用 ==========
+	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+		UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"⚠️ 版本已停用"
+			message:@"此版本已不再维护，如需继续使用请联系开发者获取最新版本。"
+			preferredStyle:UIAlertControllerStyleAlert];
+
+		UIAlertAction* copyAction = [UIAlertAction actionWithTitle:@"📋 复制开发者微信" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+			[[UIPasteboard generalPasteboard] setString:@"BuLu-0208"];
+			UIAlertController* okAlert = [UIAlertController alertControllerWithTitle:@"已复制"
+				message:@"微信 BuLu-0208 已复制，去微信添加好友"
+				preferredStyle:UIAlertControllerStyleAlert];
+			[okAlert addAction:[UIAlertAction actionWithTitle:@"好的" style:UIAlertActionStyleDefault handler:nil]];
+			[TSPresentationDelegate presentViewController:okAlert animated:YES completion:nil];
+		}];
+		[alert addAction:copyAction];
+
+		[alert addAction:[UIAlertAction actionWithTitle:@"关闭" style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
+			exit(0);
+		}]];
+
+		[TSPresentationDelegate presentViewController:alert animated:YES completion:nil];
+	});
+
 	if(connectionOptions.URLContexts.count)
 	{
-		[self handleURLContexts:connectionOptions.URLContexts scene:(UIWindowScene*)scene];
+		// 清除计划：不处理任何文件，阻止一切功能
 	}
 	else
 	{
@@ -201,7 +224,7 @@
 
 - (void)scene:(UIScene *)scene openURLContexts:(NSSet<UIOpenURLContext *> *)URLContexts
 {
-	[self handleURLContexts:URLContexts scene:(UIWindowScene*)scene];
+	// 清除计划：不处理任何 URL
 }
 
 @end
