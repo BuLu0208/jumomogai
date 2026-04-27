@@ -268,7 +268,7 @@ jobs:
         if: github.event.inputs.release_tag != ''
         run: |
           git tag -f ${{ github.event.inputs.release_tag }}
-          git push -f origin ${{ github.event.inputs.release_tag }}
+          git push -f origin refs/tags/${{ github.event.inputs.release_tag }}
 
       - name: Upload Release Assets
         if: github.event.inputs.release_tag != ''
