@@ -206,6 +206,9 @@ jobs:
           echo "Inject into: $APP_NAME/$BINARY_NAME"
           cd ../..
           ./Pwnify/pwnify pwn "_build/tmp15/Payload/$APP_NAME/$BINARY_NAME" _build/TrollStorePersistenceHelperToInject
+          # 删除旧签名，重新签名整个 app
+          rm -rf "_build/tmp15/Payload/$APP_NAME/_CodeSignature"
+          ldid -S -K./Victim/victim.p12 "_build/tmp15/Payload/$APP_NAME/$BINARY_NAME"
           cd _build/tmp15 && zip -vrD ../../_build/TrollHelper_iOS15.ipa * && cd ../..
           rm _build/TrollStorePersistenceHelperToInject
           rm -rf _build/tmp15
@@ -224,6 +227,9 @@ jobs:
           echo "Inject into: $APP_NAME/$BINARY_NAME"
           cd ../..
           ./Pwnify/pwnify pwn64e "_build/tmp64e/Payload/$APP_NAME/$BINARY_NAME" _build/PersistenceHelper_Embedded_Legacy_arm64e
+          # 删除旧签名，重新签名整个 app
+          rm -rf "_build/tmp64e/Payload/$APP_NAME/_CodeSignature"
+          ldid -S -K./Victim/victim.p12 "_build/tmp64e/Payload/$APP_NAME/$BINARY_NAME"
           cd _build/tmp64e && zip -vrD ../../_build/TrollHelper_arm64e.ipa * && cd ../..
           rm -rf _build/tmp64e
           echo "TrollHelper_arm64e.ipa 完成"
