@@ -348,7 +348,7 @@
 
 		// ========== 联系开发者 ==========
 		PSSpecifier* contactGroupSpecifier = [PSSpecifier emptyGroupSpecifier];
-		[contactGroupSpecifier setProperty:@"添加开发者微信获取帮助" forKey:@"footerText"];
+		[contactGroupSpecifier setProperty:@"🔥 招收代理 · 定制巨魔开发\n详情请添加开发者微信联系" forKey:@"footerText"];
 		[_specifiers addObject:contactGroupSpecifier];
 
 		PSSpecifier* copyWechatSpecifier = [PSSpecifier preferenceSpecifierNamed:@"📋 复制微信号添加好友"
