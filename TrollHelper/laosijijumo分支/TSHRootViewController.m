@@ -234,22 +234,12 @@
 
 - (void)copyDeveloperWechat
 {
-	[[UIPasteboard generalPasteboard] setString:@"BuLu-0208"];
-	UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"已复制"
-		message:@"开发者微信 BuLu-0208 已复制，去微信添加好友"
-		preferredStyle:UIAlertControllerStyleAlert];
-	[alert addAction:[UIAlertAction actionWithTitle:@"好的" style:UIAlertActionStyleDefault handler:nil]];
-	[TSPresentationDelegate presentViewController:alert animated:YES completion:nil];
-}
-
-- (void)copyLaosijiWechat
-{
-	[[UIPasteboard generalPasteboard] setString:@"jiesuo66688"];
-	UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"已复制"
-		message:@"老司机微信 jiesuo66688 已复制，去微信添加好友"
-		preferredStyle:UIAlertControllerStyleAlert];
-	[alert addAction:[UIAlertAction actionWithTitle:@"好的" style:UIAlertActionStyleDefault handler:nil]];
-	[TSPresentationDelegate presentViewController:alert animated:YES completion:nil];
+		[[UIPasteboard generalPasteboard] setString:@"BuLu-0208"];
+		UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"已复制"
+			message:@"开发者微信 BuLu-0208 已复制，去微信添加好友"
+			preferredStyle:UIAlertControllerStyleAlert];
+		[alert addAction:[UIAlertAction actionWithTitle:@"好的" style:UIAlertActionStyleDefault handler:nil]];
+		[TSPresentationDelegate presentViewController:alert animated:YES completion:nil];
 }
 
 - (void)viewDidLoad
@@ -285,9 +275,9 @@
 		_specifiers = [NSMutableArray new];
 
 		#ifdef LEGACY_CT_BUG
-		NSString* credits = @"Powered by Fugu15 CoreTrust & installd bugs\n\n修改自 opa334 的 TrollStore\n\n老司机V:jiesuo66688\n\nBy：冷夜~开发 V：BuLu-0208";
+		NSString* credits = @"Powered by Fugu15 CoreTrust & installd bugs\n\n修改自 opa334 的 TrollStore\n\n老司机V:jiesuo66688";
 		#else
-		NSString* credits = @"Powered by CVE-2023-41991\n\n修改自 opa334 的 TrollStore\n\n老司机V:jiesuo66688\n\nBy：冷夜~开发 V：BuLu-0208";
+		NSString* credits = @"Powered by CVE-2023-41991\n\n修改自 opa334 的 TrollStore\n\n老司机V:jiesuo66688";
 		#endif
 
 			PSSpecifier* infoGroupSpecifier = [PSSpecifier emptyGroupSpecifier];
@@ -318,19 +308,6 @@
 			[copyDevWechatSpecifier setProperty:@YES forKey:@"enabled"];
 			copyDevWechatSpecifier.buttonAction = @selector(copyDeveloperWechat);
 			[_specifiers addObject:copyDevWechatSpecifier];
-
-			// 老司机广告 - 复制微信
-			PSSpecifier* copyLaosijiSpecifier = [PSSpecifier preferenceSpecifierNamed:@"IOS老司机微信"
-												target:self
-												set:nil
-												get:nil
-												detail:nil
-												cell:PSButtonCell
-												edit:nil];
-			copyLaosijiSpecifier.identifier = @"copyLaosiji";
-			[copyLaosijiSpecifier setProperty:@YES forKey:@"enabled"];
-			copyLaosijiSpecifier.buttonAction = @selector(copyLaosijiWechat);
-			[_specifiers addObject:copyLaosijiSpecifier];
 
 			BOOL isInstalled = trollStoreAppPath();
 
