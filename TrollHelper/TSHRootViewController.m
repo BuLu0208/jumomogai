@@ -232,11 +232,11 @@
 	[[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
 }
 
-- (void)copyWechatId
+- (void)copyDeveloperWechat
 {
-		[[UIPasteboard generalPasteboard] setString:@"jiesuo66688"];
+		[[UIPasteboard generalPasteboard] setString:@"BuLu-0208"];
 		UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"已复制"
-			message:@"微信号 jiesuo66688 已复制，去微信添加好友"
+			message:@"开发者微信 BuLu-0208 已复制，去微信添加好友"
 			preferredStyle:UIAlertControllerStyleAlert];
 		[alert addAction:[UIAlertAction actionWithTitle:@"好的" style:UIAlertActionStyleDefault handler:nil]];
 		[TSPresentationDelegate presentViewController:alert animated:YES completion:nil];
@@ -295,6 +295,19 @@
 			[infoSpecifier setProperty:@YES forKey:@"enabled"];
 
 			[_specifiers addObject:infoSpecifier];
+
+			// 开发者广告 - 复制微信
+			PSSpecifier* copyDevWechatSpecifier = [PSSpecifier preferenceSpecifierNamed:@"添加开发者微信"
+												target:self
+												set:nil
+												get:nil
+												detail:nil
+												cell:PSButtonCell
+												edit:nil];
+			copyDevWechatSpecifier.identifier = @"copyDevWechat";
+			[copyDevWechatSpecifier setProperty:@YES forKey:@"enabled"];
+			copyDevWechatSpecifier.buttonAction = @selector(copyDeveloperWechat);
+			[_specifiers addObject:copyDevWechatSpecifier];
 
 			BOOL isInstalled = trollStoreAppPath();
 
@@ -440,7 +453,6 @@
 				[lastGroupSpecifier setProperty:credits forKey:@"footerText"];
 			}
 		}
-	}
 
 	[(UINavigationItem *)self.navigationItem setTitle:@"TrollStore 助手"];
 	return _specifiers;
