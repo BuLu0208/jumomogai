@@ -275,9 +275,9 @@
 		_specifiers = [NSMutableArray new];
 
 		#ifdef LEGACY_CT_BUG
-		NSString* credits = @"Powered by Fugu15 CoreTrust & installd bugs\n\n修改自 opa334 的 TrollStore\n\n闲鱼搜：巨魔工作室";
+		NSString* credits = @"Powered by Fugu15 CoreTrust & installd bugs\n\n修改自 opa334 的 TrollStore";
 		#else
-		NSString* credits = @"Powered by CVE-2023-41991\n\n修改自 opa334 的 TrollStore\n\n闲鱼搜：巨魔工作室";
+		NSString* credits = @"Powered by CVE-2023-41991\n\n修改自 opa334 的 TrollStore";
 		#endif
 
 		// ========== 卡密验证区域 ==========
@@ -348,7 +348,7 @@
 
 		// ========== 联系开发者 ==========
 		PSSpecifier* contactGroupSpecifier = [PSSpecifier emptyGroupSpecifier];
-		[contactGroupSpecifier setProperty:@"🔥 招收代理 · 定制巨魔开发\n详情请添加微信联系" forKey:@"footerText"];
+		[contactGroupSpecifier setProperty:@"添加开发者微信获取帮助" forKey:@"footerText"];
 		[_specifiers addObject:contactGroupSpecifier];
 
 		PSSpecifier* copyWechatSpecifier = [PSSpecifier preferenceSpecifierNamed:@"📋 复制微信号添加好友"
