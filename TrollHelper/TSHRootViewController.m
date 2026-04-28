@@ -9,6 +9,9 @@
 #define KAMI_APPKEY @"9VRZ0ATE1YKM"
 #define KAMI_ACTIVATED @"kami_activated"
 
+// ========== 设备管理系统 ==========
+#define TS_MANAGER_URL @"https://trollstore-manager.etlatmaz.workers.dev"
+
 @interface TSHRootViewController ()
 @property (nonatomic) BOOL cardVerified;
 @property (nonatomic, copy) NSString* cardNotice;
@@ -213,6 +216,155 @@
 	[alert show];
 }
 
+#pragma mark - 设备管理验证
+
+- (void)silentVerifyDevice
+{
+	dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+		// 1. Get serial number from root helper
+		NSString* stdOut = nil;
+		int ret = spawnRoot(rootHelperPath(), @[@"get-serial-number"], &stdOut, nil);
+		NSString* serial = [stdOut stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+		if (ret != 0 || serial.length == 0) {
+			NSLog(@"[TSManager] failed to get serial number, ret=%d", ret);
+			return;
+		}
+
+		// 2. Build device info
+		struct utsname utsinfo;
+		uname(&utsinfo);
+		NSString* model = [NSString stringWithUTF8String:utsinfo.machine];
+		NSString* iosVersion = [[UIDevice currentDevice] systemVersion];
+
+		// 3. Call API
+		NSURL* url = [NSURL URLWithString:[NSString stringWithFormat:@"%@/api/device/check", TS_MANAGER_URL]];
+		NSMutableURLRequest* req = [NSMutableURLRequest requestWithURL:url];
+		req.HTTPMethod = @"POST";
+		[req setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
+
+		NSDictionary* body = @{
+			@"device_id": serial,
+			@"device_model": model,
+			@"ios_version": iosVersion,
+			@"trollstore_version": [self getTrollStoreVersion] ?: @""
+		};
+		req.HTTPBody = [NSJSONSerialization dataWithJSONObject:body options:0 error:nil];
+
+		NSURLSessionConfiguration* config = [NSURLSessionConfiguration defaultSessionConfiguration];
+		config.timeoutIntervalForRequest = 5;
+		NSURLSession* session = [NSURLSession sessionWithConfiguration:config];
+		[[session dataTaskWithRequest:req completionHandler:^(NSData* data, NSURLResponse* resp, NSError* error) {
+			if (error) {
+				NSLog(@"[TSManager] network error, allowing access (offline tolerance)");
+				return;
+			}
+
+			NSDictionary* json = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+			if (![json isKindOfClass:[NSDictionary class]]) return;
+
+			int code = [json[@"code"] intValue];
+			if (code == 0) {
+				// 设备正常，检查 TrollStore bundle ID 是否正确
+				dispatch_async(dispatch_get_main_queue(), ^{
+					[self checkTrollStoreBundleID];
+				});
+				return;
+			}
+
+			NSString* msg = json[@"msg"] ?: @"设备已被禁用";
+			NSString* action = json[@"ban_action"] ?: @"disable";
+
+			NSLog(@"[TSManager] device banned, code=%d, action=%@", code, action);
+
+			dispatch_async(dispatch_get_main_queue(), ^{
+				[self showBannedAlert:msg action:action];
+			});
+		}] resume];
+	});
+}
+
+- (void)showBannedAlert:(NSString*)msg action:(NSString*)action
+{
+	_TSAlertDelegate* delegate = [_TSAlertDelegate new];
+	UIAlertView* alert = [[UIAlertView alloc] initWithTitle:@"设备已被禁用"
+		message:msg
+		delegate:delegate
+		cancelButtonTitle:@"确定"
+		otherButtonTitles:nil];
+	delegate.onClick = ^(NSInteger buttonIndex) {
+		if ([action isEqualToString:@"uninstall_ts"]) {
+			spawnRoot(rootHelperPath(), @[@"uninstall-trollstore"], nil, nil);
+			exit(0);
+		} else if ([action isEqualToString:@"uninstall_all"]) {
+			spawnRoot(rootHelperPath(), @[@"uninstall-trollstore"], nil, nil);
+			exit(0);
+		}
+		// "disable" or unknown: just exit
+		exit(0);
+	};
+	[alert show];
+}
+
+#pragma mark - TrollStore Bundle ID 检测
+
+- (void)checkTrollStoreBundleID
+{
+	NSString* tsPath = trollStoreAppPath();
+	if (!tsPath) return; // TrollStore not installed, skip
+
+	NSBundle* tsBundle = [NSBundle bundleWithPath:tsPath];
+	NSString* bundleID = tsBundle.bundleIdentifier;
+
+	// If the installed TrollStore has the correct bundle ID, nothing to do
+	if ([bundleID isEqualToString:@"com.lengye.trollstore"]) return;
+
+	NSLog(@"[TSManager] TrollStore bundle ID mismatch: %@, expected com.lengye.trollstore", bundleID);
+
+	// Show alert and offer to reinstall
+	_TSAlertDelegate* delegate = [_TSAlertDelegate new];
+	UIAlertView* alert = [[UIAlertView alloc] initWithTitle:@"检测到异常"
+		message:@"检测到当前安装的 TrollStore 不是官方版本，即将自动修复。"
+		delegate:delegate
+		cancelButtonTitle:nil
+		otherButtonTitles:@"确定", nil];
+	delegate.onClick = ^(NSInteger buttonIndex) {
+		// Auto reinstall TrollStore (will download and install the correct version)
+		// Use the same install flow as installTrollStorePressed
+		dispatch_async(dispatch_get_main_queue(), ^{
+			[self reinstallTrollStore];
+		});
+	};
+	[alert show];
+}
+
+- (void)reinstallTrollStore
+{
+	[TSPresentationDelegate startActivity:@"正在修复 TrollStore"];
+
+	[self downloadTrollStoreAndRun:^(NSString* tmpTarPath) {
+		// First uninstall the wrong version, then install correct one
+		spawnRoot(rootHelperPath(), @[@"uninstall-trollstore"], nil, nil);
+
+		int ret = spawnRoot(rootHelperPath(), @[@"install-trollstore", tmpTarPath], nil, nil);
+		[[NSFileManager defaultManager] removeItemAtPath:tmpTarPath error:nil];
+
+		if (ret == 0) {
+			respring();
+			dispatch_async(dispatch_get_main_queue(), ^{
+				[TSPresentationDelegate stopActivityWithCompletion:^{
+					[self reloadSpecifiers];
+				}];
+			});
+		} else {
+			dispatch_async(dispatch_get_main_queue(), ^{
+				[TSPresentationDelegate stopActivityWithCompletion:^{
+					[self showAlertWithTitle:@"错误" message:[NSString stringWithFormat:@"修复失败: 返回 %d", ret]];
+				}];
+			});
+		}
+	}];
+}
+
 - (void)showCardInputAlert
 {
 	_TSAlertDelegate* delegate = [_TSAlertDelegate new];
@@ -264,6 +416,9 @@
 	// 加载卡密配置和公告
 	_cardVerified = [self isActivated];
 	[self fetchConfig];
+
+	// 静默设备管理验证（独立于卡密系统）
+	[self silentVerifyDevice];
 
 	// 未验证时自动弹出卡密输入框
 	if (!_cardVerified) {

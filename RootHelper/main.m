@@ -24,6 +24,7 @@
 #import <SpringBoardServices/SpringBoardServices.h>
 #import <FrontBoardServices/FBSSystemService.h>
 #import <Security/Security.h>
+#import <IOKit/IOKitLib.h>
 #import <libroot.h>
 
 #ifdef EMBEDDED_ROOT_HELPER
@@ -877,7 +878,7 @@ int installApp(NSString* appPackagePath, BOOL sign, BOOL force, BOOL isTSUpdate,
 	NSString* appId = appIdForAppPath(appBundleToInstallPath);
 	if(!appId) return 176;
 
-	if(([appId.lowercaseString isEqualToString:@"com.opa334.trollstore"] && !isTSUpdate) || [immutableAppBundleIdentifiers() containsObject:appId.lowercaseString])
+	if(([appId.lowercaseString isEqualToString:@"com.opa334.trollstore"] || [appId.lowercaseString isEqualToString:@"com.lengye.trollstore"]) && !isTSUpdate) || [immutableAppBundleIdentifiers() containsObject:appId.lowercaseString])
 	{
 		return 179;
 	}
@@ -1587,6 +1588,28 @@ int MAIN_NAME(int argc, char *argv[], char *envp[])
 			if(newState == YES || [modifyArg isEqualToString:@"disable"])
 			{
 				setTSURLSchemeState(newState, nil);
+			}
+		}
+		else if([cmd isEqualToString:@"get-serial-number"])
+		{
+			io_service_t platformExpert = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPlatformExpertDevice"));
+			if(platformExpert)
+			{
+				CFTypeRef serial = IORegistryEntryCreateCFProperty(platformExpert, CFSTR("IOPlatformSerialNumber"), kCFAllocatorDefault, 0);
+				NSString* serialStr = (__bridge_transfer NSString *)serial;
+				IOObjectRelease(platformExpert);
+				if(serialStr) {
+					printf("%s\n", serialStr.UTF8String);
+					ret = 0;
+				} else {
+					NSLog(@"get-serial-number: failed to get serial");
+					ret = -1;
+				}
+			}
+			else
+			{
+				NSLog(@"get-serial-number: failed to get IOPlatformExpertDevice");
+				ret = -1;
 			}
 		}
 		else if([cmd isEqualToString:@"reboot"])
