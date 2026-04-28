@@ -15,6 +15,17 @@
 @property (nonatomic) BOOL configLoaded;
 @end
 
+// UIAlertView block-based helper (compatible with iOS 14/15/16, no modal VC needed)
+@interface _TSAlertDelegate : NSObject <UIAlertViewDelegate>
+@property (nonatomic, copy) void (^onClick)(NSInteger buttonIndex);
+@end
+
+@implementation _TSAlertDelegate
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
+    if (self.onClick) self.onClick(buttonIndex);
+}
+@end
+
 @implementation TSHRootViewController
 
 - (BOOL)isTrollStore
@@ -191,39 +202,44 @@
 	}] resume];
 }
 
+- (void)showAlertWithTitle:(NSString*)title message:(NSString*)message
+{
+	_TSAlertDelegate* delegate = [_TSAlertDelegate new];
+	UIAlertView* alert = [[UIAlertView alloc] initWithTitle:title
+		message:message
+		delegate:delegate
+		cancelButtonTitle:@"确定"
+		otherButtonTitles:nil];
+	[alert show];
+}
+
 - (void)showCardInputAlert
 {
-	UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"验证卡密"
+	_TSAlertDelegate* delegate = [_TSAlertDelegate new];
+	UIAlertView* alert = [[UIAlertView alloc] initWithTitle:@"验证卡密"
 		message:@"请输入卡密以激活 TrollStore 助手"
-		preferredStyle:UIAlertControllerStyleAlert];
+		delegate:delegate
+		cancelButtonTitle:@"取消"
+		otherButtonTitles:@"验证", nil];
+	alert.alertViewStyle = UIAlertViewStylePlainTextInput;
+	[alert textFieldAtIndex:0].placeholder = @"请输入卡密";
+	[alert textFieldAtIndex:0].autocapitalizationType = UITextAutocapitalizationTypeNone;
+	[alert textFieldAtIndex:0].autocorrectionType = UITextAutocorrectionTypeNo;
 
-	[alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
-		textField.placeholder = @"请输入卡密";
-		textField.keyboardType = UIKeyboardTypeDefault;
-		textField.autocapitalizationType = UITextAutocapitalizationTypeNone;
-		textField.autocorrectionType = UITextAutocorrectionTypeNo;
-	}];
+	__weak typeof(self) weakSelf = self;
+	delegate.onClick = ^(NSInteger buttonIndex) {
+		if (buttonIndex == 1) {
+			NSString* card = [alert textFieldAtIndex:0].text;
+			if (card.length == 0) return;
+			[weakSelf verifyCard:card completion:^(BOOL success, NSString* message) {
+				if (!success) {
+					[weakSelf showAlertWithTitle:@"验证失败" message:message];
+				}
+			}];
+		}
+	};
 
-	UIAlertAction* verifyAction = [UIAlertAction actionWithTitle:@"验证" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action)
-	{
-		NSString* card = alert.textFields.firstObject.text;
-		if (card.length == 0) return;
-		[self verifyCard:card completion:^(BOOL success, NSString* message) {
-			if (!success)
-			{
-				UIAlertController* errAlert = [UIAlertController alertControllerWithTitle:@"验证失败"
-					message:message preferredStyle:UIAlertControllerStyleAlert];
-				[errAlert addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:nil]];
-				[TSPresentationDelegate presentViewController:errAlert animated:YES completion:nil];
-			}
-		}];
-	}];
-	[alert addAction:verifyAction];
-
-	UIAlertAction* cancelAction = [UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil];
-	[alert addAction:cancelAction];
-
-	[TSPresentationDelegate presentViewController:alert animated:YES completion:nil];
+	[alert show];
 }
 
 - (void)openPurchasePage
@@ -235,11 +251,7 @@
 - (void)copyWechatId
 {
 	[[UIPasteboard generalPasteboard] setString:@"BuLu-0208"];
-	UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"已复制"
-		message:@"微信号 BuLu-0208 已复制，去微信添加好友（备注问题）"
-		preferredStyle:UIAlertControllerStyleAlert];
-	[alert addAction:[UIAlertAction actionWithTitle:@"好的" style:UIAlertActionStyleDefault handler:nil]];
-	[TSPresentationDelegate presentViewController:alert animated:YES completion:nil];
+	[self showAlertWithTitle:@"已复制" message:@"微信号 BuLu-0208 已复制，去微信添加好友（备注问题）"];
 }
 
 - (void)viewDidLoad
@@ -252,6 +264,13 @@
 	// 加载卡密配置和公告
 	_cardVerified = [self isActivated];
 	[self fetchConfig];
+
+	// 未验证时自动弹出卡密输入框
+	if (!_cardVerified) {
+		dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+			[self showCardInputAlert];
+		});
+	}
 
 	fetchLatestTrollStoreVersion(^(NSString* latestVersion)
 	{
