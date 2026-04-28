@@ -83,7 +83,10 @@
 	}];
 	[alert addAction:okAction];
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 	UIViewController* rootVC = [UIApplication sharedApplication].keyWindow.rootViewController;
+#pragma clang diagnostic pop
 	if (rootVC.presentedViewController) {
 		[rootVC.presentedViewController presentViewController:alert animated:YES completion:nil];
 	} else {
