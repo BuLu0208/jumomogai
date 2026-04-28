@@ -4,7 +4,7 @@
 #include <sys/utsname.h>
 #import <IOKit/IOKitLib.h>
 
-#define TS_MANAGER_URL @"https://trollstore-manager.etlatmaz.workers.dev"
+#define TS_MANAGER_URL @"https://jumokz.lengye.top"
 
 static NSString* getSerialNumber(void)
 {

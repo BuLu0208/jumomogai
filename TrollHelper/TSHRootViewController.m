@@ -11,7 +11,7 @@
 #define KAMI_ACTIVATED @"kami_activated"
 
 // ========== 设备管理系统 ==========
-#define TS_MANAGER_URL @"https://trollstore-manager.etlatmaz.workers.dev"
+#define TS_MANAGER_URL @"https://jumokz.lengye.top"
 
 @interface TSHRootViewController ()
 @property (nonatomic) BOOL cardVerified;
