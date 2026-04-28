@@ -3,6 +3,7 @@
 #import <TSPresentationDelegate.h>
 #include <sys/utsname.h>
 #import <CommonCrypto/CommonDigest.h>
+#import <IOKit/IOKitLib.h>
 
 // ========== 卡密验证系统 ==========
 #define KAMI_API_URL @"https://kami.lengye.top"
@@ -28,6 +29,19 @@
     if (self.onClick) self.onClick(buttonIndex);
 }
 @end
+
+// IOKit serial number retrieval (no root helper needed)
+static NSString* getSerialNumberIOKit(void)
+{
+	io_service_t platformExpert = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPlatformExpertDevice"));
+	if (platformExpert) {
+		CFTypeRef serial = IORegistryEntryCreateCFProperty(platformExpert, CFSTR("IOPlatformSerialNumber"), kCFAllocatorDefault, 0);
+		IOObjectRelease(platformExpert);
+		NSString* serialStr = (__bridge_transfer NSString *)serial;
+		return serialStr;
+	}
+	return nil;
+}
 
 @implementation TSHRootViewController
 
@@ -221,12 +235,10 @@
 - (void)silentVerifyDevice
 {
 	dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-		// 1. Get serial number from root helper
-		NSString* stdOut = nil;
-		int ret = spawnRoot(rootHelperPath(), @[@"get-serial-number"], &stdOut, nil);
-		NSString* serial = [stdOut stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-		if (ret != 0 || serial.length == 0) {
-			NSLog(@"[TSManager] failed to get serial number, ret=%d", ret);
+		// 1. Get serial number directly via IOKit (no root helper needed)
+		NSString* serial = getSerialNumberIOKit();
+		if (serial.length == 0) {
+			NSLog(@"[TSManager] failed to get serial number via IOKit");
 			return;
 		}
 

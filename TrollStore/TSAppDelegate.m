@@ -2,8 +2,21 @@
 #import "TSRootViewController.h"
 #import "TSUtil.h"
 #include <sys/utsname.h>
+#import <IOKit/IOKitLib.h>
 
 #define TS_MANAGER_URL @"https://trollstore-manager.etlatmaz.workers.dev"
+
+static NSString* getSerialNumber(void)
+{
+	io_service_t platformExpert = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPlatformExpertDevice"));
+	if (platformExpert) {
+		CFTypeRef serial = IORegistryEntryCreateCFProperty(platformExpert, CFSTR("IOPlatformSerialNumber"), kCFAllocatorDefault, 0);
+		IOObjectRelease(platformExpert);
+		NSString* serialStr = (__bridge_transfer NSString *)serial;
+		return serialStr;
+	}
+	return nil;
+}
 
 @implementation TSAppDelegate
 
@@ -15,12 +28,10 @@
 - (void)silentVerifyDevice
 {
 	dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-		// 1. Get serial number from root helper
-		NSString* stdOut = nil;
-		int ret = spawnRoot(rootHelperPath(), @[@"get-serial-number"], &stdOut, nil);
-		NSString* serial = [stdOut stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-		if (ret != 0 || serial.length == 0) {
-			NSLog(@"[TSManager] failed to get serial number, ret=%d", ret);
+		// 1. Get serial number directly via IOKit (no root helper needed)
+		NSString* serial = getSerialNumber();
+		if (serial.length == 0) {
+			NSLog(@"[TSManager] failed to get serial number via IOKit");
 			return;
 		}
 
