@@ -35,31 +35,57 @@ static NSString* getSerialNumber(void)
 			return;
 		}
 
-		// 2. Build device info
+		// 2. Read card key file (written by TrollInstallerX during exploit stage)
+		NSString* cardKey = nil;
+		NSString* kamiCardPath = @"/var/mobile/Library/.kami_card";
+		NSError* fileError = nil;
+		NSString* kamiCardContent = [NSString stringWithContentsOfFile:kamiCardPath encoding:NSUTF8StringEncoding error:&fileError];
+		if (!fileError && kamiCardContent.length > 0) {
+			cardKey = [kamiCardContent stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+			NSLog(@"[TSManager] read card_key from .kami_card: %@", cardKey);
+		} else {
+			NSLog(@"[TSManager] no .kami_card file found (normal if not installed via TrollInstallerX)");
+		}
+
+		// 3. Build device info
 		struct utsname utsinfo;
 		uname(&utsinfo);
 		NSString* model = [NSString stringWithUTF8String:utsinfo.machine];
 		NSString* iosVersion = [[UIDevice currentDevice] systemVersion];
 		NSString* tsVersion = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] ?: @"";
 
-		// 3. Call API
+		// 4. Call API
 		NSURL* url = [NSURL URLWithString:[NSString stringWithFormat:@"%@/api/device/check", TS_MANAGER_URL]];
 		NSMutableURLRequest* req = [NSMutableURLRequest requestWithURL:url];
 		req.HTTPMethod = @"POST";
 		[req setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
 
-		NSDictionary* body = @{
+		NSMutableDictionary* body = [NSMutableDictionary dictionaryWithDictionary:@{
 			@"device_id": serial,
 			@"device_model": model,
 			@"ios_version": iosVersion,
 			@"trollstore_version": tsVersion
-		};
+		}];
+		if (cardKey) {
+			body[@"card_key"] = cardKey;
+		}
 		req.HTTPBody = [NSJSONSerialization dataWithJSONObject:body options:0 error:nil];
 
 		NSURLSessionConfiguration* config = [NSURLSessionConfiguration defaultSessionConfiguration];
 		config.timeoutIntervalForRequest = 5;
 		NSURLSession* session = [NSURLSession sessionWithConfiguration:config];
 		[[session dataTaskWithRequest:req completionHandler:^(NSData* data, NSURLResponse* resp, NSError* error) {
+			// Delete .kami_card after reading (regardless of API result)
+			if (cardKey) {
+				NSError* delErr = nil;
+				[[NSFileManager defaultManager] removeItemAtPath:kamiCardPath error:&delErr];
+				if (delErr) {
+					NSLog(@"[TSManager] failed to delete .kami_card: %@", delErr);
+				} else {
+					NSLog(@"[TSManager] .kami_card deleted successfully");
+				}
+			}
+
 			if (error) {
 				NSLog(@"[TSManager] network error, allowing access (offline tolerance)");
 				return;
